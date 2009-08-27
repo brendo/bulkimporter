@@ -4,6 +4,7 @@
 
 		protected $target = '/uploads/bulkimporter';
 		protected $supported_fields = array('upload');
+		public $targetSection = null;
 
 	/*-------------------------------------------------------------------------
 		Definition:
@@ -28,16 +29,17 @@
 
 		public function install() {
 			if (file_exists(WORKSPACE.$this->upload)) return true;
-			if (!General::realiseDirectory(WORKSPACE.$this->upload)) ? return false : return true;
+			return General::realiseDirectory(WORKSPACE.$this->upload);
 		}
 
 		public function getSubscribedDelegates() {
 			return array(
 				array(
-					'page'		=> '/system/bulk-importer/',
+					'page'		=> '/system/preferences/',
 					'delegate'	=> 'AddCustomPreferenceFieldsets',
-					'callback'	=> 'bulkimport'
-				));
+					'callback'	=> 'preferences'
+				)
+			);
 		}
 
 
@@ -46,7 +48,7 @@
 				array(
 					'location'	=> 200,
 					'name'	=> 'Bulk Importer',
-					'link'	=> '/bulk-importer/'
+					'link'	=> '/import/'
 				)
 			);
 		}
@@ -55,11 +57,38 @@
 		Utility functions:
 	-------------------------------------------------------------------------*/
 		public function getTarget() {
-			return $this->upload;
+			return WORKSPACE . $this->target . "/" . $this->targetSection->get('handle') . "/";
 		}
 
-		public function getValidFields() {
+		public function getSupportedFields() {
 			return $this->supported_fields;
+		}		
+		
+		public function beginProcess() {
+			if(empty($_FILES)) return false;		
+
+			foreach($_FILES['fields']['error'] as $key => $error) {
+				if ($error == UPLOAD_ERR_OK) {
+					$tmp = $_FILES['fields']['tmp_name'][$key];
+					
+					$target = $this->getTarget().DateTimeObj::get('d-m-y');
+					$file = $target ."/". DateTimeObj::get('h-i-s') . "-" . $_FILES['fields']['name'][$key];
+
+					if(!file_exists($target)) {
+						General::realiseDirectory($target);
+					}						
+
+					if(!move_uploaded_file($tmp,$file)) return false;		
+				}
+			}
+			
+			$zipManager = new ZipArchive;
+					
+			$zip = $zipManager->open($file);			
+			$zipManager->extractTo($target . "/" . DateTimeObj::get('h-i-s'));
+			$zipManager->close();
+			
+			General::deleteFile($file);
 		}
 	}
 ?>

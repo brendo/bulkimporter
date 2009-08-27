@@ -1,6 +1,6 @@
 <?php
 
-	class File {
+	class BU_File {
 		protected $file;
 		protected $valid = '/\.(?:bmp|gif|jpe?g|png)$/i';
 		
