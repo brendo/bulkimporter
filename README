@@ -1,0 +1,32 @@
+Bulk Importer
+-------------------------------------------------------------------------------
+
+Version: 0.1
+Author: Brendan Abbott <brendan@bloodbone.ws>
+Build Date: 27 August 2009
+Github Repository: http://github.com/brendo/bulk-importer/tree/master
+Requirements: Symphony 2.0.6
+
+Broken, not working, don't use... yet
+
+
+Installation
+-------------------------------------------------------------------------------
+
+...
+
+Usage
+-------------------------------------------------------------------------------
+
+....
+
+
+TROUBLESHOOTING
+-------------------------------------------------------------------------------
+
+....
+
+CREDIT
+-------------------------------------------------------------------------------
+Extension takes a lot of similar thought to Scott's Mass Multiple Upload Injector
+@ http://github.com/scottkf/multiple-upload-injector/tree/master
