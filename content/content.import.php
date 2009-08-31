@@ -9,7 +9,7 @@
 
 		public function __viewIndex() {
 			$this->_driver = $this->_Parent->ExtensionManager->create('bulkimporter');
-					
+
 			$this->setPageType('form');
 			$this->Form->setAttribute('enctype', 'multipart/form-data');
 			$this->setTitle('Symphony &ndash; Bulk Importer');
@@ -83,10 +83,10 @@
 
 			$context->appendChild($label);
 		}
-		
-		
-		
-		public function __actionIndex() {		
+
+
+
+		public function __actionIndex() {
 			if (empty($this->_driver)) {
 				$this->_driver = $this->_Parent->ExtensionManager->create('bulkimporter');
 			}
@@ -95,24 +95,28 @@
 				$this->prepareUpload($_POST['fields']);
 			}
 		}
-		
-		public function prepareUpload($post) {		
+
+		public function prepareUpload($post) {
 			$sectionManager = new SectionManager($this->_Parent);
-			$section = $sectionManager->fetch($post['target'], 'ASC', 'name');
+			$section = $sectionManager->fetch($post['target']);
 			$this->_driver->targetSection = $section;
-			$fields = array();
-			
-			foreach($this->_driver->getSupportedFields() as $field) {
-				$fields = $section->fetchFields($field);
+			$field = null;
+
+			foreach($this->_driver->getSupportedFields() as $f) {
+				$field = $section->fetchFields($f);
 			}
-			
-			if(is_array($fields)) {
-				foreach($fields as $f) {
-					$this->_driver->beginProcess();
+
+			if(!is_null($field)) {
+				if($this->_driver->beginProcess()) {
+					$this->_driver->commitFiles();
+				} else {
+					$this->pageAlert(
+						__("You didn't upload any files..", NULL, Alert::ERROR)
+					);
 				}
 			} else {
 				$error = 'An error occured, are you sure <code>%1$s</code> has a valid upload field? Available: <code>%2$s</code>';
-				
+
 				$this->pageAlert(
 					__($error,
 						array(
@@ -122,8 +126,8 @@
 						Alert::ERROR
 					)
 				);
-			}			
+			}
 		}
-		
+
 	}
 ?>

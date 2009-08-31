@@ -1,10 +1,13 @@
 <?php
+	require_once('content/class.file.php');
 
 	class Extension_BulkImporter extends Extension {
 
 		protected $target = '/uploads/bulkimporter';
 		protected $supported_fields = array('upload');
+		protected $exempt = array(".","..","__MACOSX");
 		public $targetSection = null;
+		public $files = array();
 
 	/*-------------------------------------------------------------------------
 		Definition:
@@ -62,33 +65,70 @@
 
 		public function getSupportedFields() {
 			return $this->supported_fields;
-		}		
-		
+		}
+
 		public function beginProcess() {
-			if(empty($_FILES)) return false;		
+			if(empty($_FILES)) return false;
 
 			foreach($_FILES['fields']['error'] as $key => $error) {
 				if ($error == UPLOAD_ERR_OK) {
 					$tmp = $_FILES['fields']['tmp_name'][$key];
-					
+
 					$target = $this->getTarget().DateTimeObj::get('d-m-y');
-					$file = $target ."/". DateTimeObj::get('h-i-s') . "-" . $_FILES['fields']['name'][$key];
+					$file = DateTimeObj::get('h-i-s') . "-" . $_FILES['fields']['name'][$key];
 
 					if(!file_exists($target)) {
 						General::realiseDirectory($target);
-					}						
+					}
 
-					if(!move_uploaded_file($tmp,$file)) return false;		
+					if(!General::uploadFile($target,$file,$tmp)) return false;
 				}
 			}
-			
+
+			/* Makes this easier */
+			$uploaded = $target . "/" . $file;
+
+			/* 	Open zip file */
+			$extracted = $target . "/" . DateTimeObj::get('h-i-s');
 			$zipManager = new ZipArchive;
-					
-			$zip = $zipManager->open($file);			
-			$zipManager->extractTo($target . "/" . DateTimeObj::get('h-i-s'));
+
+			$zip = $zipManager->open($uploaded);
+			$zipManager->extractTo($extracted);
 			$zipManager->close();
-			
-			General::deleteFile($file);
+
+			/*	Tidy up */
+			General::deleteFile($uploaded);
+
+			/* 	Add the extracted files to the $files array */
+			$this->openExtracted($extracted);
+
+			return (bool)count($this->files) != 0;
+		}
+
+
+		public function openExtracted($folder) {
+			if ($extractManager = opendir($folder)) {
+				if(is_dir($extractManager) === FALSE) {
+					while(($file = readdir($extractManager)) !== FALSE) {
+						if(!in_array($file,$this->exempt)) {
+							$this->files[] = new BI_File($file);
+						}
+					}
+					closedir($extractManager);
+				} else {
+					$this->openExtracted($folder);
+				}
+			}
+		}
+
+		/*	Creates a new entry foreach valid file in the $targetSection */
+		public function commitFiles() {
+			foreach($this->files as $file) {
+				if($file->isValid) {
+					/* Add new entry */
+					echo "wootah: adding";
+				}
+			}
 		}
 	}
 ?>
