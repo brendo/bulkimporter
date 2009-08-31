@@ -15,7 +15,7 @@
 
 			$this->appendSubheading('Import');
 
-		// Events --------------------------------------------------------
+		// Settings --------------------------------------------------------
 
 			$container = new XMLElement('fieldset');
 			$container->setAttribute('class', 'settings');
@@ -28,6 +28,8 @@
 
 			$this->__viewIndexFileInterface($group);
 			$this->__viewIndexSectionName($group);
+			$this->__viewIndexSectionLinks($group);
+			$this->__viewIndexLinkedEntries($group);
 
 			$container->appendChild($group);
 			$this->Form->appendChild($container);
@@ -70,6 +72,32 @@
 
 			$context->appendChild($label);
 
+		}
+		
+		public function __viewIndexSectionLinks($context) {
+			$sectionManager = new SectionManager($this->_Parent);
+
+			/*	Label	*/
+			$label = Widget::Label(__('Bilink Field'));
+			
+			$options = null;
+
+			$label->appendChild(Widget::Select('fields[linked-section]', $options, array('id' => 'linked-section')));
+
+			$context->appendChild($label);
+		}
+		
+		public function __viewIndexLinkedEntries($context) {
+			$sectionManager = new SectionManager($this->_Parent);
+
+			/*	Label	*/
+			$label = Widget::Label(__('Link Entries'));
+			
+			$options = null;
+
+			$label->appendChild(Widget::Select('fields[linked-entry]', $options, array('id' => 'linked-entry')));
+
+			$context->appendChild($label);
 		}
 
 	/*-------------------------------------------------------------------------

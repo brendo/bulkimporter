@@ -44,7 +44,12 @@
 					'page'		=> '/system/preferences/',
 					'delegate'	=> 'AddCustomPreferenceFieldsets',
 					'callback'	=> 'preferences'
-				)
+				),
+				array(
+		       	 	'page'    => '/backend/',
+			        'delegate'  => 'InitaliseAdminPageHead',
+			        'callback'  => 'initaliseAdminPageHead'
+		      )
 			);
 		}
 
@@ -58,6 +63,14 @@
 				)
 			);
 		}
+		
+		public function initaliseAdminPageHead($context) {
+			$page = $context['parent']->Page;
+
+			if ($page instanceof contentExtensionBulkImporterImport) {      
+				$page->addScriptToHead(URL . '/extensions/bulkimporter/assets/ajaxify.js',100100992);
+			}
+	    }
 
 	/*-------------------------------------------------------------------------
 		Utility functions:

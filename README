@@ -10,7 +10,7 @@ Requirements: Symphony 2.0.6
 Uploads a zip of files to a chosen section. 
 
 Very basic at the moment and is hardcoded to work only with the Symphony default image
- validator regex.
+validator regex.
 
 Will fill the chosen section with a new entry with the name (from the file) and the file.
 
@@ -36,7 +36,7 @@ Roadmap
 	most fields to be filled
 * 	Change so that is supports all upload type extensions
 * 	Rework so that the image from the zip is somehow $_POST to let the extension use the
- 	field's default processRawFieldData	function
+	field's default processRawFieldData	function
 
 CREDIT
 -------------------------------------------------------------------------------
