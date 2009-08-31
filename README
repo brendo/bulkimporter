@@ -3,28 +3,40 @@ Bulk Importer
 
 Version: 0.1
 Author: Brendan Abbott <brendan@bloodbone.ws>
-Build Date: 27 August 2009
+Build Date: 31 August 2009
 Github Repository: http://github.com/brendo/bulk-importer/tree/master
 Requirements: Symphony 2.0.6
 
-Broken, not working, don't use... yet
+Uploads a zip of files to a chosen section. 
 
+Very basic at the moment and is hardcoded to work only with the Symphony default image
+ validator regex.
+
+Will fill the chosen section with a new entry with the name (from the file) and the file.
+
+Only works on the default upload field at this stage.
 
 Installation
 -------------------------------------------------------------------------------
 
-...
+1. 	Install the extension to extensions/bulkimporter
 
 Usage
 -------------------------------------------------------------------------------
 
-....
+1. 	Go to the System -> Bulk Importer menu
+2. 	Choose a zip of files to upload to a chosen section.
+3. 	Woot
 
-
-TROUBLESHOOTING
+Roadmap
 -------------------------------------------------------------------------------
 
-....
+* 	Ability to link uploaded files to a chosen section
+* 	Ability to upload different types of files (user can set ie. csv) which will allow 
+	most fields to be filled
+* 	Change so that is supports all upload type extensions
+* 	Rework so that the image from the zip is somehow $_POST to let the extension use the
+ 	field's default processRawFieldData	function
 
 CREDIT
 -------------------------------------------------------------------------------
