@@ -2,7 +2,6 @@
 
 	require_once(TOOLKIT . '/class.administrationpage.php');
 	require_once(TOOLKIT . '/class.sectionmanager.php');
-	require_once(TOOLKIT . '/class.entrymanager.php');
 
 	class contentExtensionBulkImporterImport extends AdministrationPage {
 		protected $_driver;
@@ -106,12 +105,44 @@
 				$field = $section->fetchFields($f);
 			}
 
+			/* Just check that the section has a valid field */
 			if(!is_null($field)) {
 				if($this->_driver->beginProcess()) {
-					$this->_driver->commitFiles();
+					$this->_driver->commitFiles($this->_Parent);
+
+					/*	Status Message */
+					$uploaded = $failed = 0;
+
+					foreach($this->_driver->files as $file) {
+						if($file->get('uploaded')) {
+							$uploaded++;
+						} else {
+							$failed++;
+						}
+					}
+
+					if($uploaded == 0) {
+						$this->pageAlert(
+							__("You didn't upload any files, %d failed", array($failed)),
+							Alert::ERROR
+						);
+					} else {
+						$result = 'Bulk import complete to <code>%1$s</code>, %2$d were uploaded, %3$d failed.';
+						$this->pageAlert(
+							__($result,
+								array(
+									$this->_driver->targetSection->get('handle'),
+									$uploaded,
+									$failed)
+							),
+							Alert::SUCCESS
+						);
+					}
+
 				} else {
 					$this->pageAlert(
-						__("You didn't upload any files..", NULL, Alert::ERROR)
+						__("You didn't upload any files..", NULL),
+						Alert::ERROR
 					);
 				}
 			} else {
@@ -122,12 +153,11 @@
 						array(
 							$this->_driver->targetSection->get('handle'),
 							implode(", ",$this->_driver->getSupportedFields())
-						),
-						Alert::ERROR
-					)
+						)
+					),
+					Alert::ERROR
 				);
 			}
 		}
-
 	}
 ?>
