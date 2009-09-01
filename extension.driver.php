@@ -5,12 +5,15 @@
 
 	class Extension_BulkImporter extends Extension {
 
+		protected $_Parent = null;
 		protected $target = '/uploads/bulkimporter';
 		protected $supported_fields = array('upload');
 		protected $exempt = array(".","..","__MACOSX");
-		public $targetSection = null;
+
+		public $target_section = null;
+		public $linked_entry = null;
 		public $files = array();
-		protected $_Parent = null;
+
 
 	/*-------------------------------------------------------------------------
 		Definition:
@@ -63,12 +66,13 @@
 				)
 			);
 		}
-		
+
 		public function initaliseAdminPageHead($context) {
 			$page = $context['parent']->Page;
 
-			if ($page instanceof contentExtensionBulkImporterImport) {      
-				$page->addScriptToHead(URL . '/extensions/bulkimporter/assets/ajaxify.js',100100992);
+			if ($page instanceof contentExtensionBulkImporterImport) {
+				$page->addScriptToHead(URL . '/extensions/bulkimporter/assets/bi.ajaxify.js',100100992);
+				$page->addStylesheetToHead(URL . '/extensions/bulkimporter/assets/bi.default.css','screen', 100100992);
 			}
 	    }
 
@@ -76,7 +80,7 @@
 		Utility functions:
 	-------------------------------------------------------------------------*/
 		public function getTarget() {
-			return WORKSPACE . $this->target . "/" . $this->targetSection->get('handle') . "/";
+			return WORKSPACE . $this->target . "/" . $this->target_section->get('handle') . "/";
 		}
 
 		public function getSupportedFields() {
@@ -137,7 +141,7 @@
 			}
 		}
 
-		/*	Creates a new entry foreach valid file in the $targetSection */
+		/*	Creates a new entry foreach valid file in the $target_section */
 		public function commitFiles($parent) {
 			$this->_Parent = $parent;
 			$entryManager = new EntryManager($this->_Parent);
@@ -146,23 +150,29 @@
 				if($file->isValid) {
 
 					$entry = $entryManager->create();
-					$entry->set('section_id',$this->targetSection->get('id'));
+					$entry->set('section_id',$this->target_section->get('id'));
 					$entry->set('author_id', $parent->Author->get('id'));
 
-					$section = $this->targetSection;
+					var_dump($entry->get());
+
+					$section = $this->target_section;
 					/*	Get the sections fields and add
 					**
 					**	TODO:		allow all fields to be filled with data
-					**	CURRENT:	name,upload
+					**	CURRENT:	name, upload, 1 linked field ('bilink')
 					*/
 					$_data = $_post = array();
-					$_data[] = $_post[] = $this->targetSection->get('id');
+					$_data[] = $_post[] = $this->target_section->get('id');
 
 					foreach($section->fetchFields() as $field) {
 
 						switch($field->get('type')) {
 							case "textbox":
 								$_data[$field->get('element_name')] = $_post[$field->get('element_name')] = $file->get();
+								break;
+
+							case "bilink":
+								$_data[$field->get('element_name')] = $_post[$field->get('element_name')] = $this->linked_entry["linked-entry"];
 								break;
 
 							case "upload":
@@ -221,6 +231,9 @@
 							$file->hasUploaded();
 						}
 					}
+
+					var_dump($_data);
+					var_dump($errors);
 				}
 			}
 
@@ -248,7 +261,7 @@
 			}
 
 			$entryManager = new EntryManager($this->_Parent);
-			$section = $this->targetSection;
+			$section = $this->target_section;
 			$schema = $section->fetchFieldsSchema();
 
 			foreach($schema as $info){

@@ -73,26 +73,26 @@
 			$context->appendChild($label);
 
 		}
-		
+
 		public function __viewIndexSectionLinks($context) {
 			$sectionManager = new SectionManager($this->_Parent);
 
 			/*	Label	*/
 			$label = Widget::Label(__('Bilink Field'));
-			
+
 			$options = null;
 
 			$label->appendChild(Widget::Select('fields[linked-section]', $options, array('id' => 'linked-section')));
 
 			$context->appendChild($label);
 		}
-		
+
 		public function __viewIndexLinkedEntries($context) {
 			$sectionManager = new SectionManager($this->_Parent);
 
 			/*	Label	*/
 			$label = Widget::Label(__('Link Entries'));
-			
+
 			$options = null;
 
 			$label->appendChild(Widget::Select('fields[linked-entry]', $options, array('id' => 'linked-entry')));
@@ -126,7 +126,10 @@
 		public function prepareUpload($post) {
 			$sectionManager = new SectionManager($this->_Parent);
 			$section = $sectionManager->fetch($post['target']);
-			$this->_driver->targetSection = $section;
+			$this->_driver->target_section = $section;
+			$this->_driver->linked_entry = array(
+										"linked-section" => $post['linked-section'],
+										"linked-entry" => $post['linked-entry']);
 			$field = null;
 
 			foreach($this->_driver->getSupportedFields() as $f) {
@@ -159,7 +162,7 @@
 						$this->pageAlert(
 							__($result,
 								array(
-									$this->_driver->targetSection->get('handle'),
+									$this->_driver->target_section->get('handle'),
 									$uploaded,
 									$failed)
 							),
@@ -179,7 +182,7 @@
 				$this->pageAlert(
 					__($error,
 						array(
-							$this->_driver->targetSection->get('handle'),
+							$this->_driver->target_section->get('handle'),
 							implode(", ",$this->_driver->getSupportedFields())
 						)
 					),
