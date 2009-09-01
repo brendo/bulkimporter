@@ -28,6 +28,7 @@
 
 			$this->__viewIndexFileInterface($group);
 			$this->__viewIndexSectionName($group);
+			
 			$this->__viewIndexSectionLinks($group);
 			$this->__viewIndexLinkedEntries($group);
 
@@ -78,12 +79,15 @@
 			$sectionManager = new SectionManager($this->_Parent);
 
 			/*	Label	*/
-			$label = Widget::Label(__('Bilink Field'));
+			$label = Widget::Label(__('Available Section Links'));
 
 			$options = null;
-
+			
+			$label->appendChild(new XMLElement("span",__('Ignore if you do not wish to link entries to another section')));
 			$label->appendChild(Widget::Select('fields[linked-section]', $options, array('id' => 'linked-section')));
-
+			
+			
+			
 			$context->appendChild($label);
 		}
 
@@ -91,7 +95,7 @@
 			$sectionManager = new SectionManager($this->_Parent);
 
 			/*	Label	*/
-			$label = Widget::Label(__('Link Entries'));
+			$label = Widget::Label(__('Section Link Entries'));
 
 			$options = null;
 
@@ -138,13 +142,14 @@
 
 			/* Just check that the section has a valid field */
 			if(!is_null($field)) {
-				if($this->_driver->beginProcess()) {
+				
+				if($this->_driver->beginProcess()) {					
 					$this->_driver->commitFiles($this->_Parent);
 
 					/*	Status Message */
 					$uploaded = $failed = 0;
 
-					foreach($this->_driver->files as $file) {
+					foreach($this->_driver->files as $file) {						
 						if($file->get('uploaded')) {
 							$uploaded++;
 						} else {
@@ -176,6 +181,8 @@
 						Alert::ERROR
 					);
 				}
+				
+				$this->_driver->cleanUp(array($uploaded,$failed));
 			} else {
 				$error = 'An error occured, are you sure <code>%1$s</code> has a valid upload field? Available: <code>%2$s</code>';
 

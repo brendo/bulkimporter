@@ -18,8 +18,11 @@
 			$this->isUploaded = true;
 		}
 
-		public function get($q = 'name') {
+		public function get($q) {
 			switch ($q) {
+				case "name":
+					return $this->niceName();
+					break;
 				case "ext":
 					return General::getExtension($this->file);
 					break;
@@ -32,6 +35,10 @@
 				default:
 					return $this->file;
 			}
+		}
+		
+		public function niceName() {
+			return preg_replace($this->valid, '', $this->file);
 		}
 
 		public function isValid() {

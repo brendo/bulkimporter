@@ -2,6 +2,11 @@
 	margin-bottom: 1.75em
 }
 
-.group > label:last-child {
+.group > label:last-child,
+.group > a.no-section {
 	float: right;
+}
+
+label span {
+	margin-bottom: .5em;
 }

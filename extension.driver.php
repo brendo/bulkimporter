@@ -124,6 +124,33 @@
 
 			return (bool)count($this->files) != 0;
 		}
+		
+		public function cleanUp($log) {
+			//echo $this->getTarget() . DateTimeObj::get('d-m-y'). "/" . DateTimeObj::get('h-i-s');
+			
+			General::rmdirr($this->getTarget() . DateTimeObj::get('d-m-y'). "/" . DateTimeObj::get('h-i-s'));
+			
+			/* Write a logfile */
+			$file = $this->getTarget() . DateTimeObj::get('d-m-y'). "/" . DateTimeObj::get('h-i-s') . "-log.txt";
+			
+			$log = '
+				------------------
+				Bulk Import Job :: ' . DateTimeObj::get('dS M, Y \a\t h:ia') . '
+				------------------
+				Files uploaded to ' . $this->target_section->get('name') . '
+				' . $log[0] . ' files uploaded
+				' . $log[1] . ' files failed
+				';
+			
+
+			if(!$handle = fopen($file, 'w')) return false;
+			
+			if(fwrite($handle,$log) === FALSE) return false;
+			
+			fclose($handle);
+			
+			return true;
+		}
 
 
 		public function openExtracted($folder) {
@@ -153,8 +180,6 @@
 					$entry->set('section_id',$this->target_section->get('id'));
 					$entry->set('author_id', $parent->Author->get('id'));
 
-					var_dump($entry->get());
-
 					$section = $this->target_section;
 					/*	Get the sections fields and add
 					**
@@ -168,11 +193,11 @@
 
 						switch($field->get('type')) {
 							case "textbox":
-								$_data[$field->get('element_name')] = $_post[$field->get('element_name')] = $file->get();
+								$_data[$field->get('element_name')] = $_post[$field->get('element_name')] = $file->get("name");
 								break;
 
 							case "bilink":
-								$_data[$field->get('element_name')] = $_post[$field->get('element_name')] = $this->linked_entry["linked-entry"];
+								$_data[$field->get('element_name')] = $_post[$field->get('element_name')] = array($this->linked_entry["linked-entry"]);
 								break;
 
 							case "upload":
@@ -232,8 +257,6 @@
 						}
 					}
 
-					var_dump($_data);
-					var_dump($errors);
 				}
 			}
 

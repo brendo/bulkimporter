@@ -10,19 +10,19 @@
 		var sectionID = $('option:selected', self).val();
 		var linked = $('#linked-section');
 		
-		linked.parent().fadeIn();
-		
 		linked.attr("disabled",false)
 			.empty();
-
-		$.get("../ajaxfields/", {section: sectionID}, function(data) {			
-			$(data).find('field').each(function() {
-				linked.prepend($("<option value='" + $(this).attr('id') + "'>" + $(this).text() + "</option>"));
-			});
-			linked.prepend($("<option value='' selected='selected'></option>"));
-		}, "xml");
 		
-		$("#linked-section").trigger("change");
+		linked.parent().slideDown("fast", function() {	
+			$("a.no-section").fadeIn("fast");
+			$.get("../ajaxfields/", {section: sectionID}, function(data) {			
+				$(data).find('field').each(function() {
+					linked.prepend($("<option value='" + $(this).attr('id') + "'>" + $(this).text() + "</option>"));
+				});
+				linked.prepend($("<option value='' selected='selected'></option>"));
+			}, "xml");	
+			
+		});
 	});
 
 	/*---- Bilink Field Change ----*/
@@ -34,16 +34,18 @@
 		var sectionID = $('option:selected', $('#context')).val();
 		var entries = $("#linked-entry");
 		
-		entries.parent().fadeIn();
-		
 		entries.attr("disabled",false)
 				.empty();
-
-		$.get("../ajaxentries/", {section: sectionID, field: bilinkID}, function(data) {			
-			$(data).find('entry').each(function() {
-				entries.prepend($("<option value='" + $(this).attr('id') + "'>" + $(this).text() + "</option>"));
-			});
-		}, "xml");
-	});
+				
+		entries.parent().slideDown("fast", function () {
+			
+			$.get("../ajaxentries/", {section: sectionID, field: bilinkID}, function(data) {			
+				$(data).find('entry').each(function() {
+					entries.prepend($("<option value='" + $(this).attr('id') + "'>" + $(this).text() + "</option>"));
+				});
+			}, "xml");
+			
+		});		
+	});	
 
 })(jQuery);

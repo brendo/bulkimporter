@@ -1,9 +1,9 @@
 Bulk Importer
 -------------------------------------------------------------------------------
 
-Version: 0.1
+Version: 0.2
 Author: Brendan Abbott <brendan@bloodbone.ws>
-Build Date: 31 August 2009
+Build Date: 1 September 2009
 Github Repository: http://github.com/brendo/bulk-importer/tree/master
 Requirements: Symphony 2.0.6
 
@@ -15,6 +15,9 @@ validator regex.
 Will fill the chosen section with a new entry with the name (from the file) and the file.
 
 Only works on the default upload field at this stage.
+
+[0.2]	Supports linking to another section via the Bilink Field 
+		[*] http://github.com/rowan-lewis/bilinkfield/tree/master
 
 Installation
 -------------------------------------------------------------------------------
@@ -31,7 +34,6 @@ Usage
 Roadmap
 -------------------------------------------------------------------------------
 
-* 	Ability to link uploaded files to a chosen section
 * 	Ability to upload different types of files (user can set ie. csv) which will allow 
 	most fields to be filled
 * 	Change so that is supports all upload type extensions
