@@ -21,8 +21,8 @@
 		public function about() {
 			return array(
 				'name'			=> 'Bulk Importer',
-				'version'		=> '0.1',
-				'release-date'	=> '2009-08-27',
+				'version'		=> '0.2',
+				'release-date'	=> '2009-09-02',
 				'author'		=> array(
 					'name'			=> 'Brendan Abbott',
 					'website'		=> 'http://www.bloodbone.ws',
@@ -33,12 +33,12 @@
 		}
 
 		public function uninstall() {
-			$this->_Parent->Configuration->remove('bulkimporter');
+			return true;
 		}
 
 		public function install() {
-			if (file_exists(WORKSPACE.$this->upload)) return true;
-			return General::realiseDirectory(WORKSPACE.$this->upload);
+			if (file_exists(WORKSPACE.$this->target)) return true;
+			return General::realiseDirectory(WORKSPACE.$this->target);
 		}
 
 		public function getSubscribedDelegates() {
@@ -87,6 +87,41 @@
 			return $this->supported_fields;
 		}
 
+		public function openExtracted($folder) {
+			if ($extractManager = opendir($folder)) {
+				if(is_dir($extractManager) === FALSE) {
+					while(($file = readdir($extractManager)) !== FALSE) {
+						if(!in_array($file,$this->exempt)) {
+							$this->files[] = new BI_File($file,$folder);
+						}
+					}
+					closedir($extractManager);
+				} else {
+					$this->openExtracted($folder);
+				}
+			}
+		}
+		
+		/* Inbuild Symphony rmdirr doesn't work.. */
+		public function rmdirr($dir) {		
+		    if(!is_dir($dir)) {
+				//echo "Unlinking: " . $dir;
+				unlink($dir);
+			} else {
+				//echo "Directory: " . $dir;
+				$d = dir($dir);
+				while($entry = $d->read()) {
+					if($entry != "." && $entry != "..") {
+						$this->rmdirr($entry);
+					}					
+				}
+				$d->close();
+				rmdir($dir);
+			}		
+		}
+
+	/*-------------------------------------------------------------------------*/
+
 		public function beginProcess() {
 			if(empty($_FILES)) return false;
 
@@ -124,15 +159,15 @@
 
 			return (bool)count($this->files) != 0;
 		}
-		
+
 		public function cleanUp($log) {
-			//echo $this->getTarget() . DateTimeObj::get('d-m-y'). "/" . DateTimeObj::get('h-i-s');
-			
-			General::rmdirr($this->getTarget() . DateTimeObj::get('d-m-y'). "/" . DateTimeObj::get('h-i-s'));
-			
+			//	Fails at the moment, because __MACOSX is just a wtf?
+			//chmod($this->getTarget() . DateTimeObj::get('d-m-y'). "/" . DateTimeObj::get('h-i-s'), intval(0777, 8));
+			//$this->rmdirr($this->getTarget() . DateTimeObj::get('d-m-y'). "/" . DateTimeObj::get('h-i-s'));
+
 			/* Write a logfile */
 			$file = $this->getTarget() . DateTimeObj::get('d-m-y'). "/" . DateTimeObj::get('h-i-s') . "-log.txt";
-			
+
 			$log = '
 				------------------
 				Bulk Import Job :: ' . DateTimeObj::get('dS M, Y \a\t h:ia') . '
@@ -140,32 +175,16 @@
 				Files uploaded to ' . $this->target_section->get('name') . '
 				' . $log[0] . ' files uploaded
 				' . $log[1] . ' files failed
+				------------------
 				';
-			
 
 			if(!$handle = fopen($file, 'w')) return false;
-			
+
 			if(fwrite($handle,$log) === FALSE) return false;
-			
+
 			fclose($handle);
-			
+
 			return true;
-		}
-
-
-		public function openExtracted($folder) {
-			if ($extractManager = opendir($folder)) {
-				if(is_dir($extractManager) === FALSE) {
-					while(($file = readdir($extractManager)) !== FALSE) {
-						if(!in_array($file,$this->exempt)) {
-							$this->files[] = new BI_File($file,$folder);
-						}
-					}
-					closedir($extractManager);
-				} else {
-					$this->openExtracted($folder);
-				}
-			}
 		}
 
 		/*	Creates a new entry foreach valid file in the $target_section */
@@ -187,17 +206,17 @@
 					**	CURRENT:	name, upload, 1 linked field ('bilink')
 					*/
 					$_data = $_post = array();
-					$_data[] = $_post[] = $this->target_section->get('id');
+					$_data[] = $this->target_section->get('id');
 
 					foreach($section->fetchFields() as $field) {
 
 						switch($field->get('type')) {
 							case "textbox":
-								$_data[$field->get('element_name')] = $_post[$field->get('element_name')] = $file->get("name");
+								$_data[$field->get('element_name')] = $file->get("name");
 								break;
 
 							case "bilink":
-								$_data[$field->get('element_name')] = $_post[$field->get('element_name')] = array($this->linked_entry["linked-entry"]);
+								$_data[$field->get('element_name')] = array($this->linked_entry["linked-entry"]);
 								break;
 
 							case "upload":
@@ -214,6 +233,8 @@
 									'size' => filesize($full_file)
 								);
 
+								/*	Because we can't upload the file using the inbuilt function
+								**	we have to fake the expected output */
 								$_post[$field->get('element_name')] = array(
 									'file' => $final_destination,
 									'size' => $_data[$field->get('element_name')]['size'],
@@ -229,12 +250,13 @@
 										DOCROOT . $field->get('destination') .
 										'/' . DateTimeObj::get('d-m-y-h-m')
 								);
+								chmod(DOCROOT . $field->get('destination') . '/' . DateTimeObj::get('d-m-y-h-m'), intval(0755, 8));
 
 								if(rename(
 									$file->get('loc') . "/" . $file->get(),
-									DOCROOT . "/workspace/" . $final_destination
-									)) {
-									chmod(DOCROOT . "/workspace/" . $final_destination, intval(0755, 8));
+									DOCROOT . "/workspace" . $final_destination
+									)) {								
+									chmod(DOCROOT . "/workspace" . $final_destination, intval(0755, 8));									
 								}
 
 								break;
@@ -251,6 +273,8 @@
 					/*	Okay, so all the fields have been validated individually, we are pretty much
 					**	right to push the data into the database
 					*/
+					$_post = array_merge($_data,$_post);
+
 					if(__ENTRY_OK__ == $this->setDataFromPost($entry, $_post, $errors, false, false)) {
 						if($entry->commit()){
 							$file->hasUploaded();
