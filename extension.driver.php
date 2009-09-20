@@ -97,27 +97,22 @@
 					}
 					closedir($extractManager);
 				} else {
-					$this->openExtracted($folder);
+					$this->openExtracted($extractManager);
 				}
 			}
 		}
 		
 		/* Inbuild Symphony rmdirr doesn't work.. */
-		public function rmdirr($dir) {		
-		    if(!is_dir($dir)) {
-				//echo "Unlinking: " . $dir;
-				unlink($dir);
-			} else {
-				//echo "Directory: " . $dir;
-				$d = dir($dir);
-				while($entry = $d->read()) {
-					if($entry != "." && $entry != "..") {
-						$this->rmdirr($entry);
-					}					
-				}
-				$d->close();
-				rmdir($dir);
-			}		
+		function delTree($dir) {
+			$files = glob( $dir . '*', GLOB_MARK );
+			
+		    foreach($files as $file) {
+		        if( substr($file, -1 ) == '/' )
+		            $this->delTree($dir . $file);
+		        else
+		            unlink($dir . $file);
+		    }
+		    rmdir($dir);
 		}
 
 	/*-------------------------------------------------------------------------*/
@@ -162,8 +157,7 @@
 
 		public function cleanUp($log) {
 			//	Fails at the moment, because __MACOSX is just a wtf?
-			//chmod($this->getTarget() . DateTimeObj::get('d-m-y'). "/" . DateTimeObj::get('h-i-s'), intval(0777, 8));
-			//$this->rmdirr($this->getTarget() . DateTimeObj::get('d-m-y'). "/" . DateTimeObj::get('h-i-s'));
+			//$this->delTree($this->getTarget() . DateTimeObj::get('d-m-y'). "/" . DateTimeObj::get('h-i-s'));
 
 			/* Write a logfile */
 			$file = $this->getTarget() . DateTimeObj::get('d-m-y'). "/" . DateTimeObj::get('h-i-s') . "-log.txt";
