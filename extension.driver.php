@@ -10,6 +10,7 @@
 		protected $supported_fields = array('upload');
 		protected $exempt = array(".","..","__MACOSX");
 
+		public $uploaded_target = null;
 		public $target_section = null;
 		public $linked_entry = null;
 		public $files = array();
@@ -101,18 +102,17 @@
 				}
 			}
 		}
-		
-		/* Inbuild Symphony rmdirr doesn't work.. */
-		function delTree($dir) {
-			$files = glob( $dir . '*', GLOB_MARK );
-			
-		    foreach($files as $file) {
-		        if( substr($file, -1 ) == '/' )
-		            $this->delTree($dir . $file);
-		        else
-		            unlink($dir . $file);
+
+		/* 	Inbuild Symphony rmdirr doesn't work..
+		**	This was taken from http://au.php.net/rmdir  */
+		function deleteDirectory($dir) {
+		    if (!file_exists($dir)) return true;
+		    if (!is_dir($dir)) return unlink($dir);
+		    foreach (scandir($dir) as $item) {
+		        if ($item == '.' || $item == '..') continue;
+		        if (!$this->deleteDirectory($dir.DIRECTORY_SEPARATOR.$item)) return false;
 		    }
-		    rmdir($dir);
+		    return rmdir($dir);
 		}
 
 	/*-------------------------------------------------------------------------*/
@@ -140,6 +140,7 @@
 
 			/* 	Open zip file */
 			$extracted = $target . "/" . DateTimeObj::get('h-i-s');
+			$this->uploaded_target = $extracted;
 			$zipManager = new ZipArchive;
 
 			$zip = $zipManager->open($uploaded);
@@ -156,8 +157,7 @@
 		}
 
 		public function cleanUp($log) {
-			//	Fails at the moment, because __MACOSX is just a wtf?
-			//$this->delTree($this->getTarget() . DateTimeObj::get('d-m-y'). "/" . DateTimeObj::get('h-i-s'));
+			$this->deleteDirectory($this->uploaded_target);
 
 			/* Write a logfile */
 			$file = $this->getTarget() . DateTimeObj::get('d-m-y'). "/" . DateTimeObj::get('h-i-s') . "-log.txt";
@@ -249,8 +249,8 @@
 								if(rename(
 									$file->get('loc') . "/" . $file->get(),
 									DOCROOT . "/workspace" . $final_destination
-									)) {								
-									chmod(DOCROOT . "/workspace" . $final_destination, intval(0755, 8));									
+									)) {
+									chmod(DOCROOT . "/workspace" . $final_destination, intval(0755, 8));
 								}
 
 								break;
