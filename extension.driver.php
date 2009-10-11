@@ -160,21 +160,17 @@
 			$this->deleteDirectory($this->uploaded_target);
 
 			/* Write a logfile */
-			$file = $this->getTarget() . DateTimeObj::get('d-m-y'). "/" . DateTimeObj::get('h-i-s') . "-log.txt";
+			$file = $this->getTarget() . "log.txt";
 
-			$log = '
-				------------------
-				Bulk Import Job :: ' . DateTimeObj::get('dS M, Y \a\t h:ia') . '
-				------------------
-				Files uploaded to ' . $this->target_section->get('name') . '
-				' . $log[0] . ' files uploaded
-				' . $log[1] . ' files failed
-				------------------
-				';
+			$entry = implode(" :: ", array(
+                                DateTimeObj::get('dS M, Y \a\t h:ia'),
+                                $this->target_section->get('name'),
+                                $log[0] . " uploaded",
+                                $log[1] . " failed"));
 
-			if(!$handle = fopen($file, 'w')) return false;
+			if(!$handle = fopen($file, 'a+')) return false;
 
-			if(fwrite($handle,$log) === FALSE) return false;
+			if(fwrite($handle,$entry) === FALSE) return false;
 
 			fclose($handle);
 
