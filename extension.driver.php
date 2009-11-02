@@ -166,7 +166,7 @@
                                 DateTimeObj::get('dS M, Y \a\t h:ia'),
                                 $this->target_section->get('name'),
                                 $log[0] . " uploaded",
-                                $log[1] . " failed"));
+                                $log[1] . " failed")) . "\r\n";
 
 			if(!$handle = fopen($file, 'a+')) return false;
 

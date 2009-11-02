@@ -141,7 +141,7 @@
 					$uploaded = $failed = 0;
 
 					foreach($this->_driver->files as $file) {
-						($file->get('uploaded')) ? $uploaded++; : $failed++;
+						($file->get('uploaded')) ? $uploaded++ : $failed++;
 					}
 
 					if($uploaded == 0) {
