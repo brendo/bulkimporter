@@ -4,14 +4,12 @@
 	});
 
 	/*----	Section Box Change ----*/
-
 	$("#context").live('change', function() {
 		var self = $(this);
 		var sectionID = $('option:selected', self).val();
 		var linked = $('#linked-section');
 
-		linked.attr("disabled",false)
-			.empty();
+		linked.attr("disabled",false).empty();
 
 		linked.parent().slideDown("fast", function() {
 			$("a.no-section").fadeIn("fast");
@@ -26,7 +24,6 @@
 	});
 
 	/*---- Bilink Field Change ----*/
-
 	$("#linked-section").live('change', function() {
 		var self = $(this);
 
@@ -34,8 +31,7 @@
 		var sectionID = $('option:selected', $('#context')).val();
 		var entries = $("#linked-entry");
 
-		entries.attr("disabled",false)
-				.empty();
+		entries.attr("disabled",false).empty();
 
 		entries.parent().slideDown("fast", function () {
 

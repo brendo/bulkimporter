@@ -15,7 +15,6 @@
 		public $linked_entry = null;
 		public $files = array();
 
-
 	/*-------------------------------------------------------------------------
 		Definition:
 	-------------------------------------------------------------------------*/
@@ -166,10 +165,9 @@
                                 DateTimeObj::get('dS M, Y \a\t h:ia'),
                                 $this->target_section->get('name'),
                                 $log[0] . " uploaded",
-                                $log[1] . " failed")) . "\r\n";
+                                $log[1] . " failed")) . "\n";
 
 			if(!$handle = fopen($file, 'a+')) return false;
-
 			if(fwrite($handle,$entry) === FALSE) return false;
 
 			fclose($handle);

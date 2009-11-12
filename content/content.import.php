@@ -106,8 +106,6 @@
 			$context->appendChild($label);
 		}
 
-
-
 		public function __actionIndex() {
 			if (empty($this->_driver)) {
 				$this->_driver = $this->_Parent->ExtensionManager->create('bulkimporter');

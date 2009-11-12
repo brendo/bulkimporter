@@ -36,7 +36,7 @@
 					return $this->file;
 			}
 		}
-		
+
 		public function niceName() {
 			return preg_replace($this->valid, '', $this->file);
 		}
