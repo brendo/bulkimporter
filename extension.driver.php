@@ -35,7 +35,7 @@
 					'email'			=> 'brendan@bloodbone.ws'
 				),
 				'description'	=> 'Imports an archive of files into a chosen section as individual entries 
-				with the option to link the newly created entries with another entry'.
+				with the option to link the newly created entries with another entry'
 	 		);
 		}
 
