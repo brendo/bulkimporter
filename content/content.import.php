@@ -23,16 +23,30 @@
 				new XMLElement('legend', 'Select <code>.zip</code> to import')
 			);
 
-			$group = new XMLElement('div');
-			$group->setAttribute('class', 'group');
+			$group = new XMLElement('fieldset');
+			$group->setAttribute('class', 'primary');
 
 			$this->__viewIndexFileInterface($group);
 			$this->__viewIndexSectionName($group);
+			$this->__viewIndexSectionFields($group);
+			
+			$container->appendChild($group);
+			
+			$group = new XMLElement('fieldset');
+			$group->setAttribute('class', 'secondary');
+			
+			$group->appendChild(
+				new XMLElement('h3', 'The BulkImporter allows you to associate the newly imported files with another entry. If you don\'t need this feature, feel free to ignore this column', array(
+					'class' =>'hidden-default',
+					'id' => 'linked-message'					
+				))
+			);
 
 			$this->__viewIndexSectionLinks($group);
 			$this->__viewIndexLinkedEntries($group);
 
 			$container->appendChild($group);
+
 			$this->Form->appendChild($container);
 
 		//---------------------------------------------------------------------
@@ -49,51 +63,69 @@
 	/*-------------------------------------------------------------------------
 		Sections:
 	-------------------------------------------------------------------------*/
-		public function __viewIndexSectionName($context) {
+		public function __viewIndexSectionName($wrapper) {
 			$sectionManager = new SectionManager($this->_Parent);
 
-			/*	Label	*/
-			$label = Widget::Label(__('Target Section'));
+			// Label
+			$label = Widget::Label(__('Import files to this section:'));
 
-			/*	Fetch sections & populate a dropdown	*/
+			// Fetch sections & populate a dropdown
 			$sections = $sectionManager->fetch(NULL, 'ASC', 'name');
 			$options = array();
 
-			if(is_array($sections) && !empty($sections)){
-				foreach($sections as $s) {
-					$options[] = array(
-						$s->get('id'),
-						($fields['target'] == $s->get('id')),
-						$s->get('name')
-					);
-				}
+			if(is_array($sections) && !empty($sections)) foreach($sections as $s) {
+				$options[] = array(
+					$s->get('id'), false, $s->get('name')
+				);
 			}
 
-			$label->appendChild(Widget::Select('fields[target]', $options, array('id' => 'context')));
+			$label->appendChild(Widget::Select('fields[target]', $options, array('id' => 'target-section')));
 
-			$context->appendChild($label);
-
+			$wrapper->appendChild($label);
 		}
 
-		public function __viewIndexSectionLinks($context) {
+		public function __viewIndexSectionFields($wrapper) {
 			$sectionManager = new SectionManager($this->_Parent);
 
-			/*	Label	*/
-			$label = Widget::Label(__('Available Section Links'));
-			$label->appendChild(new XMLElement("span",__('Ignore if you do not wish to link entries to another section')));
-			$label->appendChild(Widget::Select('fields[linked-section]', null, array('id' => 'linked-section')));
-
-			$context->appendChild($label);
+			// Label
+			$label = Widget::Label(__('Import the files to this field:'));
+			$label->appendChild(
+				Widget::Select('fields[target-field]', null, array(
+					'id' => 'target-field',
+					'class' => 'hidden-default'
+				))
+			);
+			$wrapper->appendChild($label);
 		}
 
-		public function __viewIndexLinkedEntries($context) {
+		public function __viewIndexSectionLinks($wrapper) {
 			$sectionManager = new SectionManager($this->_Parent);
 
-			/*	Label	*/
-			$label = Widget::Label(__('Section Link Entries'));
-			$label->appendChild(Widget::Select('fields[linked-entry]', null, array('id' => 'linked-entry')));
+			// Label
+			$label = Widget::Label(__('Associate imported files to entries in this section:'));
+			$label->appendChild(
+				Widget::Select('fields[linked-section-field]', null, array(
+					'id' => 'linked-section',
+					'class' => 'hidden-default'
+				))
+			);
 
-			$context->appendChild($label);
+			$wrapper->appendChild($label);
+		}
+
+		public function __viewIndexLinkedEntries($wrapper) {
+			$sectionManager = new SectionManager($this->_Parent);
+
+			// Label
+			$label = Widget::Label(__('Choose the entry that you want these files to be associated with:'));
+			$label->appendChild(
+				Widget::Select('fields[linked-entry]', null, array(
+					'id' => 'linked-entry',
+					'class' => 'hidden-default'
+				))
+			);
+
+			$wrapper->appendChild($label);
 		}
 
 	/*-------------------------------------------------------------------------
@@ -119,68 +151,56 @@
 		public function prepareUpload($post) {
 			$sectionManager = new SectionManager($this->_Parent);
 			$section = $sectionManager->fetch($post['target']);
+
 			$this->_driver->target_section = $section;
 			$this->_driver->linked_entry = array(
-										"linked-section" => $post['linked-section'],
-										"linked-entry" => $post['linked-entry']);
-			$field = null;
+				"linked-field" => $post['linked-section-field'],
+				"linked-entry" => $post['linked-entry']
+			);
 
-			foreach($this->_driver->getSupportedFields() as $f) {
-				$field = $section->fetchFields($f);
+			$field = (isset($post['target-field'])) ? $section->_fieldManager->fetch($post['target-field']) : null;
+
+			if(is_null($field)) {
+				$this->pageAlert(
+					__("There was an error locating a target field in the <code>%s</code> section", array($section->get('handle'))),
+					Alert::ERROR
+				);
+
+				return false;
+			}
+			else {
+				$this->_driver->target_field = $field;
 			}
 
-			/* Just check that the section has a valid field */
-			if(!is_null($field)) {
+			// Start to upload the files to the file system
+			if(!$this->_driver->beginProcess()) {
+				$this->pageAlert(__("No <code>.zip</code> file was provided"), Alert::ERROR);
+			}
 
-				if($this->_driver->beginProcess()) {
-					$this->_driver->commitFiles($this->_Parent);
+			// Create entries in the target section for each of the	uploaded files
+			$this->_driver->commitFiles($this->_Parent);
+			$uploaded = $failed = 0;
 
-					/*	Status Message */
-					$uploaded = $failed = 0;
+			foreach($this->_driver->files as $file) {
+				($file->imported) ? $uploaded++ : $failed++;
+			}
 
-					foreach($this->_driver->files as $file) {
-						($file->get('uploaded')) ? $uploaded++ : $failed++;
-					}
-
-					if($uploaded == 0) {
-						$this->pageAlert(
-							__("You didn't upload any files, %d failed", array($failed)),
-							Alert::ERROR
-						);
-					} else {
-						$result = 'Bulk import complete to <code>%1$s</code>, %2$d were uploaded, %3$d failed.';
-						$this->pageAlert(
-							__($result,
-								array(
-									$this->_driver->target_section->get('handle'),
-									$uploaded,
-									$failed)
-							),
-							Alert::SUCCESS
-						);
-					}
-
-				} else {
-					$this->pageAlert(
-						__("You didn't upload any files..", NULL),
-						Alert::ERROR
-					);
-				}
-
-				$this->_driver->cleanUp(array($uploaded,$failed));
-			} else {
-				$error = 'An error occured, are you sure <code>%1$s</code> has a valid upload field? Available: <code>%2$s</code>';
-
+			if($uploaded == 0) {
 				$this->pageAlert(
-					__($error,
-						array(
-							$this->_driver->target_section->get('handle'),
-							implode(", ",$this->_driver->getSupportedFields())
-						)
-					),
+					__("No files were uploaded, %d failed", array($failed)),
 					Alert::ERROR
 				);
 			}
+			else {
+				$this->pageAlert(
+					__('Bulk import complete to <code>%s</code>, %d were uploaded, %d failed.', array(
+						$section->get('handle'), $uploaded, $failed
+					)),
+					Alert::SUCCESS
+				);
+			}
+
+			$this->_driver->cleanUp(array($uploaded,$failed));
 		}
 	}
 ?>

@@ -1,17 +1,23 @@
 <?php
-	require_once('content/class.file.php');
+	require_once('lib/class.file.php');
 	require_once(TOOLKIT . '/class.entrymanager.php');
 	require_once(TOOLKIT . '/class.sectionmanager.php');
 
 	class Extension_BulkImporter extends Extension {
 
 		protected $_Parent = null;
-		protected $target = '/uploads/bulkimporter';
-		protected $supported_fields = array('upload');
-		protected $exempt = array(".","..","__MACOSX");
 
-		public $uploaded_target = null;
+		protected static $target = '/uploads/bulkimporter';
+		public $extracted_directory = null;
+
+		public static $supported_fields = array(
+			'upload' => '/upload/i',
+			'name' => '/textbox|input/i',
+			'section' => '/selectbox_link|referencelink|subsectionmanager/i'
+		);
+
 		public $target_section = null;
+		public $target_field = null;
 		public $linked_entry = null;
 		public $files = array();
 
@@ -21,14 +27,15 @@
 		public function about() {
 			return array(
 				'name'			=> 'Bulk Importer',
-				'version'		=> '0.2',
-				'release-date'	=> '2009-09-02',
+				'version'		=> '0.9',
+				'release-date'	=> '2010-11-11',
 				'author'		=> array(
 					'name'			=> 'Brendan Abbott',
 					'website'		=> 'http://www.bloodbone.ws',
 					'email'			=> 'brendan@bloodbone.ws'
 				),
-				'description'	=> 'Imports an archive of images into a chosen section as individual entries.'
+				'description'	=> 'Imports an archive of files into a chosen section as individual entries 
+				with the option to link the newly created entries with another entry'.
 	 		);
 		}
 
@@ -71,8 +78,8 @@
 			$page = $context['parent']->Page;
 
 			if ($page instanceof contentExtensionBulkImporterImport) {
-				$page->addScriptToHead(URL . '/extensions/bulkimporter/assets/bi.ajaxify.js',100100992);
-				$page->addStylesheetToHead(URL . '/extensions/bulkimporter/assets/bi.default.css','screen', 100100992);
+				$page->addStylesheetToHead(URL . '/extensions/bulkimporter/assets/default.css','screen', 100);
+				$page->addScriptToHead(URL . '/extensions/bulkimporter/assets/default.js', 101);
 			}
 	    }
 
@@ -80,199 +87,231 @@
 		Utility functions:
 	-------------------------------------------------------------------------*/
 		public function getTarget() {
-			return WORKSPACE . $this->target . "/" . $this->target_section->get('handle') . "/";
+			return WORKSPACE . Extension_BulkImporter::$target . "/";
 		}
 
-		public function getSupportedFields() {
-			return $this->supported_fields;
-		}
+		/**
+		 * Given a directory, recursively find all the files and add them to
+		 * the $this->files if they aren't a hidden directory.
+		 *
+	     * @param string $dir
+	 	 * @return boolean
+		 */
+		public function openExtracted($dir) {
+			try {
+				$files = new RecursiveIteratorIterator(
+				    new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
+				    RecursiveIteratorIterator::CHILD_FIRST
+				);
 
-		public function openExtracted($folder) {
-			if ($extractManager = opendir($folder)) {
-				if(is_dir($extractManager) === FALSE) {
-					while(($file = readdir($extractManager)) !== FALSE) {
-						if(!in_array($file,$this->exempt)) {
-							$this->files[] = new BI_File($file,$folder);
-						}
-					}
-					closedir($extractManager);
-				} else {
-					$this->openExtracted($extractManager);
+				foreach($files as $file) {
+					if($file->isDir() || preg_match('/^\./', $file->getFilename())) continue;
+
+					$this->files[] = new BulkImporterFile($file);
 				}
 			}
+			catch (Exception $ex) {
+				return false;
+			}
+
+			return true;
 		}
 
-		/* 	Inbuild Symphony rmdirr doesn't work..
-		**	This was taken from http://au.php.net/rmdir  */
-		function deleteDirectory($dir) {
-		    if (!file_exists($dir)) return true;
-		    if (!is_dir($dir)) return unlink($dir);
-		    foreach (scandir($dir) as $item) {
-		        if ($item == '.' || $item == '..') continue;
-		        if (!$this->deleteDirectory($dir.DIRECTORY_SEPARATOR.$item)) return false;
-		    }
-		    return rmdir($dir);
+		/**
+		 * Recursively deletes all files and the directories given a parent
+		 * directory. Taken from StackOverflow
+		 *
+		 * @link http://stackoverflow.com/questions/3338123/how-do-i-recursively-delete-a-directory-and-its-entire-contents-filessub-dirs/3352564#3352564
+		 * @param string $dir
+		 * @return boolean
+		 */
+		public static function deleteDirectory($dir) {
+			try {
+				$files = new RecursiveIteratorIterator(
+				    new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
+				    RecursiveIteratorIterator::CHILD_FIRST
+				);
+
+				foreach ($files as $fileinfo) {
+					if($fileinfo->getFilename() == "log.txt") continue;
+
+				    $remove = ($fileinfo->isDir() ? 'rmdir' : 'unlink');
+				    $remove($fileinfo->getRealPath());
+				}
+
+				// Remove current directory
+				rmdir($dir);
+			}
+			catch (Exception $ex) {
+				return false;
+			}
+
+			return true;
 		}
 
 	/*-------------------------------------------------------------------------*/
 
+		/**
+		 * Uploads the zip file to a target directory using the current date. The function
+		 * then extracts the content of the zip to the same folder, removes the zip file
+		 * after extraction and calls the openExtracted function to append the files to the
+		 * $files array.
+		 *
+		 * @return boolean
+		 *  True if the $files array is not empty, false otherwise
+		 */
 		public function beginProcess() {
-			if(empty($_FILES)) return false;
+			if(empty($_FILES['fields']['name']['file'])) return false;
 
 			foreach($_FILES['fields']['error'] as $key => $error) {
 				if ($error == UPLOAD_ERR_OK) {
 					$tmp = $_FILES['fields']['tmp_name'][$key];
 
-					$target = $this->getTarget() . DateTimeObj::get('d-m-y');
-					$file = DateTimeObj::get('h-i-s') . "-" . $_FILES['fields']['name'][$key];
+					// Upload files to /workspace/uploads/bulkimporter/11-11-2010
+					$target = $this->getTarget() . DateTimeObj::get('d-m-Y');
+					$file = $_FILES['fields']['name'][$key];
 
-					if(!file_exists($target)) {
-						General::realiseDirectory($target);
-					}
+					if(!file_exists($target)) General::realiseDirectory($target);
 
 					if(!General::uploadFile($target,$file,$tmp)) return false;
+
+					$uploadedZipPath = $target . "/" . $file;
 				}
 			}
 
-			/* Makes this easier */
-			$uploaded = $target . "/" . $file;
-
-			/* 	Open zip file */
-			$extracted = $target . "/" . DateTimeObj::get('h-i-s');
-			$this->uploaded_target = $extracted;
 			$zipManager = new ZipArchive;
+			$zip = $zipManager->open($uploadedZipPath);
 
-			$zip = $zipManager->open($uploaded);
-			$zipManager->extractTo($extracted);
+			// The directory where the extracted zip contents should go to.
+			$this->extracted_directory = $target;
+
+			$zipManager->extractTo($this->extracted_directory);
 			$zipManager->close();
 
-			/*	Tidy up */
-			General::deleteFile($uploaded);
+			// Delete the zip file
+			General::deleteFile($uploadedZipPath);
 
-			/* 	Add the extracted files to the $files array */
-			$this->openExtracted($extracted);
+			// Add the extracted files to the $files array
+			$this->openExtracted($this->extracted_directory);
 
-			return (bool)count($this->files) != 0;
+			return count($this->files) != 0;
 		}
 
 		public function cleanUp($log) {
-			$this->deleteDirectory($this->uploaded_target);
-
-			/* Write a logfile */
-			$file = $this->getTarget() . "log.txt";
+			$this->deleteDirectory($this->extracted_directory);
 
 			$entry = implode(" :: ", array(
-                                DateTimeObj::get('dS M, Y \a\t h:ia'),
-                                $this->target_section->get('name'),
-                                $log[0] . " uploaded",
-                                $log[1] . " failed")) . "\n";
+				DateTimeObj::get('dS M, Y \a\t h:ia'),
+				$this->target_section->get('name'),
+				$log[0] . " uploaded",
+				$log[1] . " failed"
+			)) . PHP_EOL;
 
-			if(!$handle = fopen($file, 'a+')) return false;
-			if(fwrite($handle,$entry) === FALSE) return false;
-
-			fclose($handle);
-
-			return true;
+			return (boolean)file_put_contents($this->getTarget() . "log.txt", $entry, FILE_APPEND);
 		}
 
 		/*	Creates a new entry foreach valid file in the $target_section */
 		public function commitFiles($parent) {
 			$this->_Parent = $parent;
 			$entryManager = new EntryManager($this->_Parent);
+			$section = $this->target_section;
 
-			foreach($this->files as $file) {
-				if($file->isValid) {
+			// This is the default field instances that will populated with data.
+			$entries = array();
+			$fields = array(
+				'upload' => $this->target_field,
+				'name' => null,
+				'section' => null
+			);
 
-					$entry = $entryManager->create();
-					$entry->set('section_id',$this->target_section->get('id'));
-					$entry->set('author_id', $parent->Author->get('id'));
+			foreach($section->fetchFields() as $field) {
+				if(
+					General::validateString($field->get('type'), Extension_BulkImporter::$supported_fields['name']) &&
+					is_null($fields['name'])
+				) {
+					$fields['name'] = $field;
+				}
 
-					$section = $this->target_section;
-					/*	Get the sections fields and add
-					**
-					**	TODO:		allow all fields to be filled with data
-					**	CURRENT:	name, upload, 1 linked field ('bilink')
-					*/
-					$_data = $_post = array();
-					$_data[] = $this->target_section->get('id');
-
-					foreach($section->fetchFields() as $field) {
-
-						switch($field->get('type')) {
-							case "textbox":
-								$_data[$field->get('element_name')] = $file->get("name");
-								break;
-
-							case "bilink":
-								$_data[$field->get('element_name')] = array($this->linked_entry["linked-entry"]);
-								break;
-
-							case "upload":
-								$full_file = $file->get('loc') . "/" . $file->get();
-								$final_destination = preg_replace("/^\/workspace/", '', $field->get('destination')) .
-													'/' . DateTimeObj::get('d-m-y-h-m') .
-													'/' . $file->get();
-
-								$_data[$field->get('element_name')] = array(
-									'name' => $file->get(),
-									'type' => $file->get('ext'),
-									'tmp_name' => $full_file,
-									'error' => 0,
-									'size' => filesize($full_file)
-								);
-
-								/*	Because we can't upload the file using the inbuilt function
-								**	we have to fake the expected output */
-								$_post[$field->get('element_name')] = array(
-									'file' => $final_destination,
-									'size' => $_data[$field->get('element_name')]['size'],
-									'mimetype' => $_data[$field->get('element_name')]['type'],
-									'meta' => serialize(
-												$field->getMetaInfo($final_destination,
-												$_data[$field->get('element_name')]['type'])
-											)
-								);
-
-								/* Move the image from it's bulk-imported location */
-								General::realiseDirectory(
-										DOCROOT . $field->get('destination') .
-										'/' . DateTimeObj::get('d-m-y-h-m')
-								);
-								chmod(DOCROOT . $field->get('destination') . '/' . DateTimeObj::get('d-m-y-h-m'), intval(0755, 8));
-
-								if(rename(
-									$file->get('loc') . "/" . $file->get(),
-									DOCROOT . "/workspace" . $final_destination
-									)) {
-									chmod(DOCROOT . "/workspace" . $final_destination, intval(0755, 8));
-								}
-
-								break;
-						}
-
-					}
-					$errors = array();
-
-					/*	Check all the fields that they are correct */
-					if(__ENTRY_FIELD_ERROR__ == $entry->checkPostData($_data,$errors)) {
-						continue;
-					}
-
-					/*	Okay, so all the fields have been validated individually, we are pretty much
-					**	right to push the data into the database
-					*/
-					$_post = array_merge($_data,$_post);
-
-					if(__ENTRY_OK__ == $this->setDataFromPost($entry, $_post, $errors, false, false)) {
-						if($entry->commit()){
-							$file->hasUploaded();
-						}
-					}
-
+				if(
+					General::validateString($field->get('type'), Extension_BulkImporter::$supported_fields['section']) &&
+					is_null($fields['section'])
+				) {
+					$fields['section'] = $field;
 				}
 			}
 
-			return true;
+			foreach($this->files as $file) {
+				if(!$file->isValid($this->target_field)) continue;
+
+				$_data = $_post = array();
+				$entry = $entryManager->create();
+				$entry->set('section_id', $section->get('id'));
+				$entry->set('author_id', $this->_Parent->Author->get('id'));
+
+				$_data[] = $section->get('id');
+
+				// Set the Name
+				$_data[$fields['name']->get('element_name')] = $file->name;
+
+				// Set the Upload Field
+				$final_destination = preg_replace("/^\/workspace/", '', $field->get('destination')) . '/' . $file->rawname;
+
+				$_data[$fields['upload']->get('element_name')] = array(
+					'name' => $file->rawname,
+					'type' => $file->mimetype,
+					'tmp_name' => $file->location,
+					'error' => 0,
+					'size' => $file->size
+				);
+
+				//	Because we can't upload the file using the inbuilt function
+				//	we have to fake the expected output
+				$_post[$fields['upload']->get('element_name')] = array(
+					'file' 		=> $final_destination,
+					'size' 		=> $file->size,
+					'mimetype' 	=> $file->mimetype,
+					'meta' 		=> serialize(
+						$fields['upload']->getMetaInfo($final_destination, $file->extension)
+					)
+				);
+
+				// Move the image from it's bulk-imported location
+				General::realiseDirectory(DOCROOT . $field->get('destination'));
+
+				chmod(DOCROOT . $field->get('destination'), intval(0755, 8));
+
+				if(rename($file->location, DOCROOT . "/workspace" . $final_destination)) {
+					chmod(DOCROOT . "/workspace" . $final_destination, intval(0755, 8));
+				}
+
+				$errors = array();
+
+				//	Check all the fields that they are correct
+				if(__ENTRY_FIELD_ERROR__ == $entry->checkPostData($_data,$errors)) continue;
+
+				//	Okay, so all the fields have been validated individually, we are pretty much
+				//	right to push the data into the database
+				$_post = array_merge($_data,$_post);
+
+				if(__ENTRY_OK__ == $this->setDataFromPost($entry, $_post, $errors, false, false)) {
+					if($entry->commit()) {
+						$file->hasUploaded();
+						$entries[] = $entry->get('id');
+					}
+				}
+			}
+
+			// Set the Section Association
+			if(!empty($entries)) {
+				$entry = current($entryManager->fetch($this->linked_entry['linked-entry']));
+
+				// Linked field, process the array of ID's to add
+				$field = $entryManager->fieldManager->fetch($this->linked_entry['linked-field']);
+				$result = $field->processRawFieldData($entries, $s, false, $entry->get('id'));
+
+				$entry->setData($this->linked_entry['linked-field'], $result);
+				$entry->commit();
+			}
 		}
 
 		/*	Can't use the full Symphony set because field->processRawData will fail as the uploaded file
@@ -281,7 +320,6 @@
 		private function setDataFromPost($entry, $data, &$error, $simulate=false, $ignore_missing_fields=false){
 
 			$error = NULL;
-
 			$status = __ENTRY_OK__;
 
 			// Entry has no ID, create it:
@@ -305,28 +343,39 @@
 
 				if($ignore_missing_fields && !isset($data[$field->get('element_name')])) continue;
 
-				/*	If this field is an upload, don't call it's inherit functions, as they'll fail */
-				if(!in_array($field->get('type'),$this->getSupportedFields())) {
-
-					$result = $field->processRawFieldData(
-						(isset($data[$info['element_name']]) ? $data[$info['element_name']] : NULL), $s, $m, false, $entry->get('id')
-					);
-
-					if($s != Field::__OK__){
-						$status = __ENTRY_FIELD_ERROR__;
-						$error = array('field_id' => $info['id'], 'message' => $m);
-					}
-
-				} else {
+				//	If this field is an upload, don't call it's inherit functions, as they will fail
+				//	because it has already been uploaded.
+				if(General::validateString($field->get('type'), Extension_BulkImporter::$supported_fields['upload'])) {
 					$status = __ENTRY_OK__;
 					$result = $data[$field->get('element_name')];
+				}
+				else {
+					//	Check the field status
+					$result = $field->checkPostFieldData(
+						(isset($data[$info['element_name']]) ? $data[$info['element_name']] : NULL), $message, $entry->get('id')
+					);
+
+					if($result != Field::__OK__){
+						$status = __ENTRY_FIELD_ERROR__;
+						$error = array(
+							'field_id' => $info['id'],
+							'message' => $message
+						);
+
+						continue;
+					}
+
+					//	If everything is sweet, process the data
+					$result = $field->processRawFieldData(
+						(isset($data[$info['element_name']]) ? $data[$info['element_name']] : NULL), $s, false, $entry->get('id')
+					);
 				}
 
 				$entry->setData($info['id'], $result);
 			}
 
 			// Failed to create entry, cleanup
-			if($status != __ENTRY_OK__ and !is_null($entry_id)) {
+			if($status != __ENTRY_OK__ && !is_null($entry_id)) {
 				Symphony::Database()->delete('tbl_entries', " `id` = '$entry_id' ");
 			}
 

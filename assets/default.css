@@ -1,0 +1,8 @@
+.group > label {
+	margin-bottom: 1.75em
+}
+
+.group > label:last-child,
+.group > a.no-section {
+	float: right;
+}
