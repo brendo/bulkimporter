@@ -29,16 +29,16 @@
 			$this->__viewIndexFileInterface($group);
 			$this->__viewIndexSectionName($group);
 			$this->__viewIndexSectionFields($group);
-			
+
 			$container->appendChild($group);
-			
+
 			$group = new XMLElement('fieldset');
 			$group->setAttribute('class', 'secondary');
-			
+
 			$group->appendChild(
 				new XMLElement('h3', 'The BulkImporter allows you to associate the newly imported files with another entry. If you don\'t need this feature, feel free to ignore this column', array(
 					'class' =>'hidden-default',
-					'id' => 'linked-message'					
+					'id' => 'linked-message'
 				))
 			);
 
@@ -162,7 +162,7 @@
 
 			if(is_null($field)) {
 				$this->pageAlert(
-					__("There was an error locating a target field in the <code>%s</code> section", array($section->get('handle'))),
+					__("There was an error locating a target field in the <code>%s</code> section", array($section->get('name'))),
 					Alert::ERROR
 				);
 
@@ -178,7 +178,18 @@
 			}
 
 			// Create entries in the target section for each of the	uploaded files
-			$this->_driver->commitFiles($this->_Parent);
+			try {
+				$this->_driver->commitFiles($this->_Parent);
+			}
+			catch (Exception $ex) {
+				$this->pageAlert(
+					$ex->getMessage(),
+					Alert::ERROR
+				);
+
+				return false;
+			}
+
 			$uploaded = $failed = 0;
 
 			foreach($this->_driver->files as $file) {

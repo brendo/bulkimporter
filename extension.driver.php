@@ -27,14 +27,14 @@
 		public function about() {
 			return array(
 				'name'			=> 'Bulk Importer',
-				'version'		=> '0.9',
-				'release-date'	=> '2010-11-11',
+				'version'		=> '0.9.1',
+				'release-date'	=> '2010-11-15',
 				'author'		=> array(
 					'name'			=> 'Brendan Abbott',
 					'website'		=> 'http://www.bloodbone.ws',
 					'email'			=> 'brendan@bloodbone.ws'
 				),
-				'description'	=> 'Imports an archive of files into a chosen section as individual entries 
+				'description'	=> 'Imports an archive of files into a chosen section as individual entries
 				with the option to link the newly created entries with another entry'
 	 		);
 		}
@@ -251,9 +251,15 @@
 				$_data[] = $section->get('id');
 
 				// Set the Name
-				$_data[$fields['name']->get('element_name')] = $file->name;
+				if(!is_null($fields['name'])) {
+					$_data[$fields['name']->get('element_name')] = $file->name;
+				}
 
 				// Set the Upload Field
+				if(is_null($fields['upload'])) {
+					throw new Exception(__('No valid upload field found in the <code>%</code>', array($section->get('name'))));
+				}
+
 				$final_destination = preg_replace("/^\/workspace/", '', $field->get('destination')) . '/' . $file->rawname;
 
 				$_data[$fields['upload']->get('element_name')] = array(
@@ -302,12 +308,18 @@
 			}
 
 			// Set the Section Association
-			if(!empty($entries)) {
+			if(!empty($entries) && !is_null($this->linked_entry['linked-entry'])) {
 				$entry = current($entryManager->fetch($this->linked_entry['linked-entry']));
 
 				// Linked field, process the array of ID's to add
 				$field = $entryManager->fieldManager->fetch($this->linked_entry['linked-field']);
 				$result = $field->processRawFieldData($entries, $s, false, $entry->get('id'));
+
+				// Get the current linked entries and merge with the new ones
+				$existing_values = $entry->getData($this->linked_entry['linked-field']);
+				if(is_array($existing_values['relation_id'])) {
+					$result['relation_id'] = array_merge_recursive($result['relation_id'], $existing_values['relation_id']);
+				}
 
 				$entry->setData($this->linked_entry['linked-field'], $result);
 				$entry->commit();
