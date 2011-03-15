@@ -143,13 +143,14 @@
 				$this->_driver = $this->_Parent->ExtensionManager->create('bulkimporter');
 			}
 
-			if (@isset($_POST['action']['save'])) {
+			if (isset($_POST['action']) && array_key_exists('save', $_POST['action'])) {
 				$this->prepareUpload($_POST['fields']);
 			}
 		}
 
 		public function prepareUpload($post) {
 			$sectionManager = new SectionManager($this->_Parent);
+			$fieldManager = new FieldManager($this->_Parent);
 			$section = $sectionManager->fetch($post['target']);
 
 			$this->_driver->target_section = $section;
@@ -158,7 +159,7 @@
 				"linked-entry" => $post['linked-entry']
 			);
 
-			$field = (isset($post['target-field'])) ? $section->_fieldManager->fetch($post['target-field']) : null;
+			$field = (isset($post['target-field'])) ? $fieldManager->fetch($post['target-field']) : null;
 
 			if(is_null($field)) {
 				$this->pageAlert(
@@ -183,7 +184,7 @@
 			}
 			catch (Exception $ex) {
 				$this->pageAlert(
-					$ex->getMessage(),
+					$ex->getMessage() . ' in ' . $ex->getFile() . ' on line ' . $ex->getLine(),
 					Alert::ERROR
 				);
 

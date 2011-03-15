@@ -8,6 +8,7 @@
 
 		public function view() {
 			$sectionManager = new SectionManager($this->_Parent);
+			$fieldManager = new FieldManager($this->_Parent);
 
 			// Fetch sections & populate a dropdown with the available upload fields
 			$section = $sectionManager->fetch($_GET['section']);
@@ -35,7 +36,7 @@
 			));
 
 			if(is_array($associations) && !empty($associations)) foreach($associations as $related_field) {
-				$field = $section->_fieldManager->fetch($related_field['child_section_field_id']);
+				$field = $fieldManager->fetch($related_field['child_section_field_id']);
 
 				if(!preg_match(Extension_BulkImporter::$supported_fields['section'], $field->get('type'))) continue;
 
@@ -62,7 +63,34 @@
 				));
 
 				if(is_array($associations) && !empty($associations)) foreach($associations as $related_field) {
-					$field = $section->_fieldManager->fetch($related_field['field_id']);
+					$field = $fieldManager->fetch($related_field['field_id']);
+
+					if(!preg_match(Extension_BulkImporter::$supported_fields['section'], $field->get('type'))) continue;
+
+					$element = new XMLElement("section", General::sanitize($field->get('label')), array(
+						'id' => $field->get('id'),
+						'type' => $field->get('type'),
+						'section' => $sectionManager->fetch($field->get('parent_section'))->get('name')
+					));
+
+					$this->_Result->appendChild($element);
+				}
+			}
+
+			// Check for BiLink
+			if($extensionManager->fetchStatus('bilinkfield') == EXTENSION_ENABLED) {
+				$associations = Symphony::Database()->fetch(sprintf("
+						SELECT
+							`field_id`
+						FROM
+							`tbl_fields_bilink`
+						WHERE
+							`linked_section_id` = %d
+					", Symphony::Database()->cleanValue($_GET['section'])
+				));
+
+				if(is_array($associations) && !empty($associations)) foreach($associations as $related_field) {
+					$field = $fieldManager->fetch($related_field['field_id']);
 
 					if(!preg_match(Extension_BulkImporter::$supported_fields['section'], $field->get('type'))) continue;
 

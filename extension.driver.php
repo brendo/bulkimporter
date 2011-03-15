@@ -13,7 +13,7 @@
 		public static $supported_fields = array(
 			'upload' => '/upload/i',
 			'name' => '/textbox|input/i',
-			'section' => '/selectbox_link|referencelink|subsectionmanager/i'
+			'section' => '/selectbox_link|referencelink|subsectionmanager|bilink/i'
 		);
 
 		public $target_section = null;
@@ -27,8 +27,8 @@
 		public function about() {
 			return array(
 				'name'			=> 'Bulk Importer',
-				'version'		=> '0.9.1',
-				'release-date'	=> '2010-11-15',
+				'version'		=> '0.9.2',
+				'release-date'	=> '2010-03-15',
 				'author'		=> array(
 					'name'			=> 'Brendan Abbott',
 					'website'		=> 'http://www.bloodbone.ws',
@@ -98,20 +98,38 @@
 	 	 * @return boolean
 		 */
 		public function openExtracted($dir) {
-			try {
-				$files = new RecursiveIteratorIterator(
-				    new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
-				    RecursiveIteratorIterator::CHILD_FIRST
-				);
+			if (PHP_VERSION_ID >= 50300) {
+				try {
+					$files = new RecursiveIteratorIterator(
+					    new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
+					    RecursiveIteratorIterator::CHILD_FIRST
+					);
 
-				foreach($files as $file) {
-					if($file->isDir() || preg_match('/^\./', $file->getFilename())) continue;
+					foreach($files as $file) {
+						if($file->isDir() || preg_match('/^\./', $file->getFilename())) continue;
 
-					$this->files[] = new BulkImporterFile($file);
+						$this->files[] = new BulkImporterFile($file);
+					}
+				}
+				catch (Exception $ex) {
+					return false;
 				}
 			}
-			catch (Exception $ex) {
-				return false;
+			// PHP 5.2.x fallback
+			else {
+				if ($extractManager = opendir($dir)) {
+					while(($file = readdir($extractManager)) !== FALSE) {
+						if(in_array($file,  array('.', '..', '__MACOSX'))) continue;
+
+						if(is_dir($file)) {
+							$this->openExtracted($file);
+						}
+						else {
+							$this->files[] = new BulkImporterFile(new SplFileInfo($dir . '/' . $file));
+						}
+					}
+					closedir($extractManager);
+				}
 			}
 
 			return true;
@@ -126,26 +144,39 @@
 		 * @return boolean
 		 */
 		public static function deleteDirectory($dir) {
-			try {
-				$files = new RecursiveIteratorIterator(
-				    new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
-				    RecursiveIteratorIterator::CHILD_FIRST
-				);
+			if (PHP_VERSION_ID >= 50300) {
+				try {
+					$files = new RecursiveIteratorIterator(
+					    new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
+					    RecursiveIteratorIterator::CHILD_FIRST
+					);
 
-				foreach ($files as $fileinfo) {
-					if($fileinfo->getFilename() == "log.txt") continue;
+					foreach ($files as $fileinfo) {
+						if($fileinfo->getFilename() == "log.txt") continue;
 
-				    $remove = ($fileinfo->isDir() ? 'rmdir' : 'unlink');
-				    $remove($fileinfo->getRealPath());
+					    $remove = ($fileinfo->isDir() ? 'rmdir' : 'unlink');
+					    $remove($fileinfo->getRealPath());
+					}
+
+					// Remove current directory
+					rmdir($dir);
+				}
+				catch (Exception $ex) {
+					return false;
+				}
+			}
+			else {
+				if (!file_exists($dir)) return true;
+
+				if (!is_dir($dir)) return unlink($dir);
+
+				foreach (scandir($dir) as $item) {
+					if ($item == '.' || $item == '..') continue;
+					if (!Extension_BulkImporter::deleteDirectory($dir.DIRECTORY_SEPARATOR.$item)) return false;
 				}
 
-				// Remove current directory
-				rmdir($dir);
+				return rmdir($dir);
 			}
-			catch (Exception $ex) {
-				return false;
-			}
-
 			return true;
 		}
 
@@ -163,12 +194,13 @@
 		public function beginProcess() {
 			if(empty($_FILES['fields']['name']['file'])) return false;
 
+			$target = $this->getTarget() . DateTimeObj::get('d-m-Y');
+
 			foreach($_FILES['fields']['error'] as $key => $error) {
 				if ($error == UPLOAD_ERR_OK) {
 					$tmp = $_FILES['fields']['tmp_name'][$key];
 
 					// Upload files to /workspace/uploads/bulkimporter/11-11-2010
-					$target = $this->getTarget() . DateTimeObj::get('d-m-Y');
 					$file = $_FILES['fields']['name'][$key];
 
 					if(!file_exists($target)) General::realiseDirectory($target);
@@ -201,7 +233,7 @@
 			$this->deleteDirectory($this->extracted_directory);
 
 			$entry = implode(" :: ", array(
-				DateTimeObj::get('dS M, Y \a\t h:ia'),
+				DateTimeObj::get(__SYM_DATETIME_FORMAT__),
 				$this->target_section->get('name'),
 				$log[0] . " uploaded",
 				$log[1] . " failed"
@@ -277,14 +309,16 @@
 					'size' 		=> $file->size,
 					'mimetype' 	=> $file->mimetype,
 					'meta' 		=> serialize(
-						$fields['upload']->getMetaInfo($final_destination, $file->extension)
+						$fields['upload']->getMetaInfo($file->location, $file->extension)
 					)
 				);
 
 				// Move the image from it's bulk-imported location
-				General::realiseDirectory(DOCROOT . $field->get('destination'));
+				if(!file_exists(DOCROOT . $field->get('destination'))) {
+					General::realiseDirectory(DOCROOT . $field->get('destination'));
 
-				chmod(DOCROOT . $field->get('destination'), intval(0755, 8));
+					chmod(DOCROOT . $field->get('destination'), intval(0755, 8));
+				}
 
 				if(rename($file->location, DOCROOT . "/workspace" . $final_destination)) {
 					chmod(DOCROOT . "/workspace" . $final_destination, intval(0755, 8));

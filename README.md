@@ -6,8 +6,8 @@ added to the first instance of a "text input" style field. Optionally, you can l
 newly imported entries to another entry using either the Select Box Link, Reference Link
 or Subsection Manager extensions.
 
-- Version: 0.9.1
-- Date: 15 November 2010
+- Version: 0.9.2
+- Date: 15 March 2011
 - Requirements: Symphony 2.0.8 or newer, <http://github.com/symphonycms/symphony-2/>
 - Author: Brendan Abbott, brendan@bloodbone.ws
 - GitHub Repository: <https://github.com/brendo/bulk-importer>
@@ -36,12 +36,11 @@ Clicking the 'import' button will upload the zip file, extract the files and the
 _Images_ section. It will also associate these entries in the _Images_ section with the 'My Test Album' entry
 in the _Gallery_ section.
 
-
 ## SUPPORTED FIELDS
 
 ### Upload fields
 
-Any extension that matches the /upload/i regex (which is all known to date).
+Any extension that matches the /upload/i regexp (which is all known to date).
 
 ### Text Input fields
 
@@ -49,4 +48,4 @@ The textbox field extension and the core text input field are supported.
 
 ### Section Link fields
 
-The Selectbox Link, Reference Link and Subsection Manager extensions.
+The Selectbox Link, Reference Link, Subsection Manager and BiLink extensions.
