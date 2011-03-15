@@ -309,7 +309,7 @@
 					'size' 		=> $file->size,
 					'mimetype' 	=> $file->mimetype,
 					'meta' 		=> serialize(
-						$fields['upload']->getMetaInfo($file->location, $file->extension)
+						$fields['upload']->getMetaInfo($file->location, $file->mimetype)
 					)
 				);
 
