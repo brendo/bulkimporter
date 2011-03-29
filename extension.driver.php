@@ -63,11 +63,10 @@
 			);
 		}
 
-
 		public function fetchNavigation() {
 			return array(
 				array(
-					'location'	=> 200,
+					'location'	=> __('System'),
 					'name'	=> 'Bulk Importer',
 					'link'	=> '/import/'
 				)
