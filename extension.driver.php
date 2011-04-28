@@ -291,7 +291,7 @@
 					throw new Exception(__('No valid upload field found in the <code>%</code>', array($section->get('name'))));
 				}
 
-				$final_destination = preg_replace("/^\/workspace/", '', $field->get('destination')) . '/' . $file->rawname;
+				$final_destination = preg_replace("/^\/workspace/", '', $this->target_field->get('destination')) . '/' . $file->rawname;
 
 				$_data[$fields['upload']->get('element_name')] = array(
 					'name' => $file->rawname,
