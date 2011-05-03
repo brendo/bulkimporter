@@ -314,10 +314,10 @@
 				);
 
 				// Move the image from it's bulk-imported location
-				if(!file_exists(DOCROOT . $field->get('destination'))) {
-					General::realiseDirectory(DOCROOT . $field->get('destination'));
+				if(!file_exists(DOCROOT . $this->target_field->get('destination'))) {
+					General::realiseDirectory(DOCROOT . $this->target_field->get('destination'));
 
-					chmod(DOCROOT . $field->get('destination'), intval(0755, 8));
+					chmod(DOCROOT . $this->target_field->get('destination'), intval(0755, 8));
 				}
 
 				if(rename($file->location, DOCROOT . "/workspace" . $final_destination)) {
