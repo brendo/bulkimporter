@@ -9,13 +9,16 @@
 
 		protected static $target = '/uploads/bulkimporter';
 		public $extracted_directory = null;
-		public $preserve_subdirectories = false;
+		public $extracted_archive = null;
 
 		public static $supported_fields = array(
 			'upload' => '/upload/i',
 			'name' => '/textbox|input/i',
 			'section' => '/selectbox_link|referencelink|subsectionmanager|bilink/i'
 		);
+
+		public $preserve_subdirectories = false;
+		public $archive_is_parent = false;
 
 		public $target_section = null;
 		public $target_field = null;
@@ -218,7 +221,14 @@
 			// The directory where the extracted zip contents should go to.
 			$this->extracted_directory = $target;
 
-			$zipManager->extractTo($this->extracted_directory);
+			$path = '';
+			if ($this->archive_is_parent) {
+				$path = '/' . preg_replace('/\.[^\.]+$/', '', basename($uploadedZipPath));
+				$this->extracted_archive = basename($path);
+				if(!file_exists($this->extracted_directory . $path)) General::realiseDirectory($this->extracted_directory . $path);
+			}
+
+			$zipManager->extractTo($this->extracted_directory . $path);
 			$zipManager->close();
 
 			// Delete the zip file
@@ -293,7 +303,14 @@
 					throw new Exception(__('No valid upload field found in the <code>%</code>', array($section->get('name'))));
 				}
 
-				$path = ($this->preserve_subdirectories ? dirname(substr($file->location, strlen($this->extracted_directory))) : '') . '/';
+				$path = '/';
+				if ($this->preserve_subdirectories) {
+					$path = dirname(substr($file->location, strlen($this->extracted_directory))) . '/';
+				}
+				else if ($this->archive_is_parent) {
+					$path = '/' . $this->extracted_archive . '/';
+				}
+
 				$final_destination = preg_replace("/^\/workspace/", '', $this->target_field->get('destination')) . $path . $file->rawname;
 
 				$_data[$fields['upload']->get('element_name')] = array(

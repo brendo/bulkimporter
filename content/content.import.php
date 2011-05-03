@@ -140,6 +140,11 @@
 			$input = Widget::Input('fields[preserve_subdirectories]', 'yes', 'checkbox');
 			$label->setValue(__('%s Preserve subdirectories', array($input->generate())));
 			$context->appendChild($label);
+
+			$label = new XMLElement('label');
+			$input = Widget::Input('fields[archive_is_parent]', 'yes', 'checkbox');
+			$label->setValue(__('%s Use archive name as subdirectory', array($input->generate())));
+			$context->appendChild($label);
 		}
 
 		public function __actionIndex() {
@@ -163,6 +168,7 @@
 				"linked-entry" => $post['linked-entry']
 			);
 			$this->_driver->preserve_subdirectories = ($post['preserve_subdirectories'] == 'yes' ? true : false);
+			$this->_driver->archive_is_parent = ($post['archive_is_parent'] == 'yes' ? true : false);
 
 			$field = (isset($post['target-field'])) ? $fieldManager->fetch($post['target-field']) : null;
 
