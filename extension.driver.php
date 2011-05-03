@@ -120,11 +120,12 @@
 					while(($file = readdir($extractManager)) !== FALSE) {
 						if(in_array($file,  array('.', '..', '__MACOSX'))) continue;
 
+						$file = $dir . '/' . $file;
 						if(is_dir($file)) {
 							$this->openExtracted($file);
 						}
 						else {
-							$this->files[] = new BulkImporterFile(new SplFileInfo($dir . '/' . $file));
+							$this->files[] = new BulkImporterFile(new SplFileInfo($file));
 						}
 					}
 					closedir($extractManager);
