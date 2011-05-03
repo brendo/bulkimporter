@@ -9,6 +9,7 @@
 
 		protected static $target = '/uploads/bulkimporter';
 		public $extracted_directory = null;
+		public $preserve_subdirectories = false;
 
 		public static $supported_fields = array(
 			'upload' => '/upload/i',
@@ -292,7 +293,8 @@
 					throw new Exception(__('No valid upload field found in the <code>%</code>', array($section->get('name'))));
 				}
 
-				$final_destination = preg_replace("/^\/workspace/", '', $this->target_field->get('destination')) . '/' . $file->rawname;
+				$path = ($this->preserve_subdirectories ? dirname(substr($file->location, strlen($this->extracted_directory))) : '') . '/';
+				$final_destination = preg_replace("/^\/workspace/", '', $this->target_field->get('destination')) . $path . $file->rawname;
 
 				$_data[$fields['upload']->get('element_name')] = array(
 					'name' => $file->rawname,
@@ -314,10 +316,10 @@
 				);
 
 				// Move the image from it's bulk-imported location
-				if(!file_exists(DOCROOT . $this->target_field->get('destination'))) {
-					General::realiseDirectory(DOCROOT . $this->target_field->get('destination'));
-
-					chmod(DOCROOT . $this->target_field->get('destination'), intval(0755, 8));
+				$path = WORKSPACE . dirname($final_destination);
+				if(!file_exists($path)) {
+					General::realiseDirectory($path);
+					chmod($path, intval(0755, 8));
 				}
 
 				if(rename($file->location, DOCROOT . "/workspace" . $final_destination)) {

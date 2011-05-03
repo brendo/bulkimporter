@@ -134,7 +134,11 @@
 		public function __viewIndexFileInterface($context) {
 			$label = Widget::Label(__('File'));
 			$label->appendChild(Widget::Input('fields[file]', NULL, 'file'));
+			$context->appendChild($label);
 
+			$label = new XMLElement('label');
+			$input = Widget::Input('fields[preserve_subdirectories]', 'yes', 'checkbox');
+			$label->setValue(__('%s Preserve subdirectories', array($input->generate())));
 			$context->appendChild($label);
 		}
 
@@ -158,6 +162,7 @@
 				"linked-field" => $post['linked-section-field'],
 				"linked-entry" => $post['linked-entry']
 			);
+			$this->_driver->preserve_subdirectories = ($post['preserve_subdirectories'] == 'yes' ? true : false);
 
 			$field = (isset($post['target-field'])) ? $fieldManager->fetch($post['target-field']) : null;
 
