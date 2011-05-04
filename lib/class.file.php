@@ -2,11 +2,11 @@
 
 	class BulkImporterFile {
 		public $file;
-		public $errors;
 		protected $name;
 		protected $location;
 		protected $imported = false;
 		protected $valid = true;
+		protected $errors;
 
 		public function __construct(SplFileInfo $file) {
 			$this->file = $file;
@@ -67,6 +67,10 @@
 			
 			if($name == "rawname") {
 				return $this->file->getFilename();
+			}
+
+			if($name == "errors") {
+				return $this->errors;
 			}
 
 			return $this->$name;
