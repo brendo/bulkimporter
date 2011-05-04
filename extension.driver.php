@@ -284,7 +284,16 @@
 			}
 
 			foreach($this->files as $file) {
-				if(!$file->isValid($this->target_field)) continue;
+				$path = '/';
+				if ($this->preserve_subdirectories) {
+					$path = dirname(substr($file->location, strlen($this->extracted_directory))) . '/';
+				}
+				else if ($this->archive_is_parent) {
+					$path = '/' . $this->extracted_archive . '/';
+				}
+
+				$final_destination = preg_replace("/^\/workspace/", '', $this->target_field->get('destination')) . $path . $file->rawname;
+				if(!$file->isValid($this->target_field, $final_destination)) continue;
 
 				$_data = $_post = array();
 				$entry = $entryManager->create();
@@ -302,16 +311,6 @@
 				if(is_null($fields['upload'])) {
 					throw new Exception(__('No valid upload field found in the <code>%</code>', array($section->get('name'))));
 				}
-
-				$path = '/';
-				if ($this->preserve_subdirectories) {
-					$path = dirname(substr($file->location, strlen($this->extracted_directory))) . '/';
-				}
-				else if ($this->archive_is_parent) {
-					$path = '/' . $this->extracted_archive . '/';
-				}
-
-				$final_destination = preg_replace("/^\/workspace/", '', $this->target_field->get('destination')) . $path . $file->rawname;
 
 				$_data[$fields['upload']->get('element_name')] = array(
 					'name' => $file->rawname,

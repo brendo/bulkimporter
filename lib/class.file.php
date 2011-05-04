@@ -2,6 +2,7 @@
 
 	class BulkImporterFile {
 		public $file;
+		public $errors;
 		protected $name;
 		protected $location;
 		protected $imported = false;
@@ -15,6 +16,8 @@
 				'/\.' . preg_quote(General::getExtension($file)) . '$/',
 				null, $file->getFilename()
 			);
+
+			$this->errors = array();
 		}
 
 		/**
@@ -31,10 +34,20 @@
 		 * @param Field $field
 		 * @return boolean
 		 */
-		public function isValid(Field $field) {
+		public function isValid(Field $field, $destination = NULL) {
 			if(is_null($field->get('validator'))) return $this->valid;
 
 			$this->valid = General::validateString($this->extension, $field->get('validator'));
+
+			if (!$this->valid) {
+				$this->errors[] = __("File chosen in '%s' does not match allowable file types for that field.", array($field->get('label')));
+			}
+			else if (!empty($destination)) {
+				$this->valid = (strlen($destination) < 255 ? true : false);
+				if (!$this->valid) {
+					$this->errors[] = __("Length of file name chosen in '%s' exceeds maximum allowed for that field.", array($field->get('label')));
+				}
+			}
 
 			return $this->valid;
 		}
