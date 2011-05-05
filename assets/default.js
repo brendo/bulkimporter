@@ -1,5 +1,10 @@
 (function($) {
 	$(document).ready(function() {
+		// Language strings
+		Symphony.Language.add({
+			'No valid upload field found': false		
+		});
+
 		$("select.hidden-default").parent().hide();
 		$("h3.hidden-default").hide();
 
@@ -30,7 +35,7 @@
 					});
 
 					if(field_opts == "") {
-						field_opts += "<option value=''>No upload fields found</option>";
+						field_opts += "<option value=''>" + Symphony.Language.get('No valid upload field found') + "</option>";
 					}
 
 					fields.parent().slideDown("fast", function() {
