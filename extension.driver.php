@@ -315,6 +315,14 @@
 
 				$_post[$this->target_field->get('element_name')] = $final_destination;
 
+				// Cache some info, before we move file
+				// https://github.com/brendo/bulkimporter/pull/7#issuecomment-1105691
+				$meta = array(
+					'size' => $file->size,
+					'mimetype' => $file->mimetype,
+					'meta' => serialize($this->target_field->getMetaInfo($file->location, $file->mimetype))
+				);
+
 				// Move the image from it's bulk-imported location
 				$path = WORKSPACE . dirname($final_destination);
 				if(!file_exists($path)) {
@@ -338,9 +346,7 @@
 					//	Because we can't upload the file using the inbuilt function
 					//	we have to fake the expected output
 					$upload = $entry->getData($this->target_field->get('id'));
-					if (empty($upload['size'])) $upload['size'] = $file->size;
-					if (empty($upload['mimetype'])) $upload['mimetype'] = $file->mimetype;
-					if (empty($upload['meta'])) $upload['meta'] = serialize($this->target_field->getMetaInfo(WORKSPACE . $upload['file'], $file->mimetype));
+					$upload = array_merge($meta, $upload);
 					$entry->setData($this->target_field->get('id'), $upload);
 
 					/**
@@ -353,7 +359,7 @@
 					 * @param Entry $entry
 					 * @param array $fields
 					 */
-					Symphony::ExtensionManager()->notifyMembers('EntryPreCreate', '/publish/new/', array('section' => $section, 'entry' => &$entry, 'fields' => &$_data));
+					Symphony::ExtensionManager()->notifyMembers('EntryPreCreate', '/publish/new/', array('section' => $section, 'entry' => &$entry, 'fields' => &$_post));
 
 					if($entry->commit()) {
 						$file->hasUploaded();
@@ -369,7 +375,7 @@
 						 * @param Entry $entry
 						 * @param array $fields
 						 */
-						Symphony::ExtensionManager()->notifyMembers('EntryPostCreate', '/publish/new/', array('section' => $section, 'entry' => $entry, 'fields' => $_data));
+						Symphony::ExtensionManager()->notifyMembers('EntryPostCreate', '/publish/new/', array('section' => $section, 'entry' => $entry, 'fields' => $_post));
 					}
 				}
 				else {
