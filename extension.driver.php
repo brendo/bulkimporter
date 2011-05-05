@@ -346,7 +346,9 @@
 					//	Because we can't upload the file using the inbuilt function
 					//	we have to fake the expected output
 					$upload = $entry->getData($this->target_field->get('id'));
-					$upload = array_merge($meta, $upload);
+					foreach ($meta as $key => $value) {
+						if (empty($upload[$key])) $upload[$key] = $value;
+					}
 					$entry->setData($this->target_field->get('id'), $upload);
 
 					/**
