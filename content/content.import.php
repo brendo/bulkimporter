@@ -5,23 +5,44 @@
 
 	class contentExtensionBulkImporterImport extends AdministrationPage {
 		protected $_driver;
+		protected $_errors;
 
 		public function __viewIndex() {
 			$this->_driver = $this->_Parent->ExtensionManager->create('bulkimporter');
 
 			$this->setPageType('form');
 			$this->Form->setAttribute('enctype', 'multipart/form-data');
-			$this->setTitle('Symphony &ndash; Bulk Importer');
+			$this->setTitle(__('%1$s &ndash; %2$s', array(__('Symphony'), __('Bulk Importer'))));
 
-			$this->appendSubheading('Import');
+			$this->appendSubheading(__('Import'));
+
+		// Previous errors -------------------------------------------------
+
+			if (!empty($this->_errors) && is_array($this->_errors)) {
+				$container = new XMLElement('fieldset');
+				$container->setAttribute('class', 'settings');
+				$container->appendChild(
+					new XMLElement('legend', __('Errors'))
+				);
+				$p = new XMLElement('p', __('Previous attempt encountered some errors'));
+				$p->setAttribute('class', 'help');
+				$container->appendChild($p);
+
+				$this->__viewIndexErrors($container, $this->_errors);
+
+				$this->Form->appendChild($container);
+			}
 
 		// Settings --------------------------------------------------------
 
 			$container = new XMLElement('fieldset');
 			$container->setAttribute('class', 'settings');
 			$container->appendChild(
-				new XMLElement('legend', 'Select <code>.zip</code> to import')
+				new XMLElement('legend', __('Upload archive'))
 			);
+			$p = new XMLElement('p', __('Select <code>.zip</code> to import'));
+			$p->setAttribute('class', 'help');
+			$container->appendChild($p);
 
 			$group = new XMLElement('fieldset');
 			$group->setAttribute('class', 'primary');
@@ -36,7 +57,7 @@
 			$group->setAttribute('class', 'secondary');
 
 			$group->appendChild(
-				new XMLElement('h3', 'The BulkImporter allows you to associate the newly imported files with another entry. If you don\'t need this feature, feel free to ignore this column', array(
+				new XMLElement('h3', __('The BulkImporter allows you to associate the newly imported files with another entry. If you don\'t need this feature, feel free to ignore this column'), array(
 					'class' =>'hidden-default',
 					'id' => 'linked-message'
 				))
@@ -55,7 +76,7 @@
 			$div->setAttribute('class', 'actions');
 
 			$attr = array('accesskey' => 's');
-			$div->appendChild(Widget::Input('action[save]', 'Import', 'submit', $attr));
+			$div->appendChild(Widget::Input('action[save]', __('Import'), 'submit', $attr));
 
 			$this->Form->appendChild($div);
 		}
@@ -63,6 +84,24 @@
 	/*-------------------------------------------------------------------------
 		Sections:
 	-------------------------------------------------------------------------*/
+		public function __viewIndexErrors($wrapper, array $errors) {
+			if (empty($errors) || !is_array($errors)) return;
+
+			$label = Widget::Label('');
+			$label->setAttribute('class', 'bulkimporter failed files');
+
+			$failed = 0;
+			foreach ($errors as $error => $paths) {
+				$failed += count($paths);
+				$e = new XMLElement('div');
+				$e->appendChild(new XMLElement('p', __('(%d) %s', array(count($paths), $error))));
+				$e->appendChild(new XMLElement('ul', '<li>' . implode('</li><li>', $paths) . '</li>'));
+				$label->appendChild($e);
+			}
+
+			$wrapper->appendChild(Widget::wrapFormElementWithError($label, __('%d failed.', array($failed))));
+		}
+
 		public function __viewIndexSectionName($wrapper) {
 			$sectionManager = new SectionManager($this->_Parent);
 
@@ -134,7 +173,16 @@
 		public function __viewIndexFileInterface($context) {
 			$label = Widget::Label(__('File'));
 			$label->appendChild(Widget::Input('fields[file]', NULL, 'file'));
+			$context->appendChild($label);
 
+			$label = new XMLElement('label');
+			$input = Widget::Input('fields[preserve_subdirectories]', 'yes', 'checkbox');
+			$label->setValue(__('%s Preserve subdirectories', array($input->generate())));
+			$context->appendChild($label);
+
+			$label = new XMLElement('label');
+			$input = Widget::Input('fields[archive_is_parent]', 'yes', 'checkbox');
+			$label->setValue(__('%s Use archive name as subdirectory', array($input->generate())));
 			$context->appendChild($label);
 		}
 
@@ -158,6 +206,8 @@
 				"linked-field" => $post['linked-section-field'],
 				"linked-entry" => $post['linked-entry']
 			);
+			$this->_driver->preserve_subdirectories = ($post['preserve_subdirectories'] == 'yes' ? true : false);
+			$this->_driver->archive_is_parent = ($post['archive_is_parent'] == 'yes' ? true : false);
 
 			$field = (isset($post['target-field'])) ? $fieldManager->fetch($post['target-field']) : null;
 
@@ -192,9 +242,16 @@
 			}
 
 			$uploaded = $failed = 0;
+			$this->_errors = array();
 
 			foreach($this->_driver->files as $file) {
-				($file->imported) ? $uploaded++ : $failed++;
+				if ($file->imported) {
+					$uploaded++;
+				}
+				else {
+					$failed++;
+					$this->_errors[$file->errors[0]][] = str_replace($this->_driver->extracted_directory, '', $file->location);
+				}
 			}
 
 			if($uploaded == 0) {
@@ -215,4 +272,4 @@
 			$this->_driver->cleanUp(array($uploaded,$failed));
 		}
 	}
-?>
+

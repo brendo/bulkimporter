@@ -6,3 +6,10 @@
 .group > a.no-section {
 	float: right;
 }
+
+.failed.files div ul {
+	display: none;
+}
+.failed.files div:hover ul {
+	display: block;
+}
