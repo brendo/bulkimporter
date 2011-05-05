@@ -52,6 +52,15 @@
 			return $this->valid;
 		}
 
+		public function setErrors($errors) {
+			if (is_array($errors)) {
+				$this->errors = aray_merge($this->errors, $errors);
+			}
+			else {
+				$this->errors[] = $errors;
+			}
+		}
+
 		public function __get($name) {
 			if($name == "extension") {
 				return "." . General::getExtension($this->file);

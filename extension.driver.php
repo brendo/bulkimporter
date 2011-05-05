@@ -310,7 +310,7 @@
 
 				// Set the Upload Field
 				if(is_null($fields['upload'])) {
-					throw new Exception(__('No valid upload field found in the <code>%</code>', array($section->get('name'))));
+					throw new Exception(__('No valid upload field found in the <code>%s</code>', array($section->get('name'))));
 				}
 
 				$_post[$this->target_field->get('element_name')] = $final_destination;
@@ -329,7 +329,10 @@
 				$errors = array();
 
 				//	Check all the fields that they are correct
-				if(__ENTRY_FIELD_ERROR__ == $entry->checkPostData($_post, $errors)) continue;
+				if(__ENTRY_FIELD_ERROR__ == $entry->checkPostData($_post, $errors)) {
+					if (!empty($errors)) $file->setErrors($errors);
+					continue;
+				}
 
 				if(__ENTRY_OK__ == $entry->setDataFromPost($_post, $errors, false, false)) {
 					//	Because we can't upload the file using the inbuilt function
@@ -340,10 +343,37 @@
 					if (empty($upload['meta'])) $upload['meta'] = serialize($this->target_field->getMetaInfo(WORKSPACE . $upload['file'], $file->mimetype));
 					$entry->setData($this->target_field->get('id'), $upload);
 
+					/**
+					 * Just prior to creation of an Entry
+					 *
+					 * @delegate EntryPreCreate
+					 * @param string $context
+					 * '/publish/new/'
+					 * @param Section $section
+					 * @param Entry $entry
+					 * @param array $fields
+					 */
+					Symphony::ExtensionManager()->notifyMembers('EntryPreCreate', '/publish/new/', array('section' => $section, 'entry' => &$entry, 'fields' => &$_data));
+
 					if($entry->commit()) {
 						$file->hasUploaded();
 						$entries[] = $entry->get('id');
+
+						/**
+						 * Creation of an Entry. New Entry object is provided.
+						 *
+						 * @delegate EntryPostCreate
+						 * @param string $context
+						 * '/publish/new/'
+						 * @param Section $section
+						 * @param Entry $entry
+						 * @param array $fields
+						 */
+						Symphony::ExtensionManager()->notifyMembers('EntryPostCreate', '/publish/new/', array('section' => $section, 'entry' => $entry, 'fields' => $_data));
 					}
+				}
+				else {
+					$file->setErrors(__('Could not save entry in the <code>%s</code>', array($section->get('name'))));
 				}
 			}
 
