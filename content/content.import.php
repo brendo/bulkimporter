@@ -272,4 +272,4 @@
 			$this->_driver->cleanUp(array($uploaded,$failed));
 		}
 	}
-?>
+
