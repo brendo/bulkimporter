@@ -30,7 +30,7 @@
 	-------------------------------------------------------------------------*/
 		public function about() {
 			return array(
-				'name'			=> 'Bulk Importer',
+				'name'			=> __('Bulk Importer'),
 				'version'		=> '0.9.2',
 				'release-date'	=> '2010-03-15',
 				'author'		=> array(
@@ -38,8 +38,8 @@
 					'website'		=> 'http://www.bloodbone.ws',
 					'email'			=> 'brendan@bloodbone.ws'
 				),
-				'description'	=> 'Imports an archive of files into a chosen section as individual entries
-				with the option to link the newly created entries with another entry'
+				'description'	=> __('Imports an archive of files into a chosen section as individual entries
+				with the option to link the newly created entries with another entry')
 	 		);
 		}
 
@@ -71,7 +71,7 @@
 			return array(
 				array(
 					'location'	=> __('System'),
-					'name'	=> 'Bulk Importer',
+					'name'	=> __('Bulk Importer'),
 					'link'	=> '/import/'
 				)
 			);
@@ -295,16 +295,17 @@
 				$final_destination = preg_replace("/^\/workspace/", '', $this->target_field->get('destination')) . $path . $file->rawname;
 				if(!$file->isValid($this->target_field, $final_destination)) continue;
 
-				$_data = $_post = array();
+				$_post = array();
 				$entry = $entryManager->create();
 				$entry->set('section_id', $section->get('id'));
-				$entry->set('author_id', $this->_Parent->Author->get('id'));
+				$entry->set('author_id', Administration::instance()->Author->get('id'));
 
-				$_data[] = $section->get('id');
+				// TODO: was this needed for anything?
+				//$_data[] = $section->get('id');
 
 				// Set the Name
 				if(!is_null($fields['name'])) {
-					$_data[$fields['name']->get('element_name')] = $file->name;
+					$_post[$fields['name']->get('element_name')] = $file->name;
 				}
 
 				// Set the Upload Field
@@ -312,24 +313,7 @@
 					throw new Exception(__('No valid upload field found in the <code>%</code>', array($section->get('name'))));
 				}
 
-				$_data[$fields['upload']->get('element_name')] = array(
-					'name' => $file->rawname,
-					'type' => $file->mimetype,
-					'tmp_name' => $file->location,
-					'error' => 0,
-					'size' => $file->size
-				);
-
-				//	Because we can't upload the file using the inbuilt function
-				//	we have to fake the expected output
-				$_post[$fields['upload']->get('element_name')] = array(
-					'file' 		=> $final_destination,
-					'size' 		=> $file->size,
-					'mimetype' 	=> $file->mimetype,
-					'meta' 		=> serialize(
-						$fields['upload']->getMetaInfo($file->location, $file->mimetype)
-					)
-				);
+				$_post[$this->target_field->get('element_name')] = $final_destination;
 
 				// Move the image from it's bulk-imported location
 				$path = WORKSPACE . dirname($final_destination);
@@ -338,20 +322,24 @@
 					chmod($path, intval(0755, 8));
 				}
 
-				if(rename($file->location, DOCROOT . "/workspace" . $final_destination)) {
-					chmod(DOCROOT . "/workspace" . $final_destination, intval(0755, 8));
+				if(rename($file->location, WORKSPACE . $final_destination)) {
+					chmod(WORKSPACE . $final_destination, intval(0755, 8));
 				}
 
 				$errors = array();
 
 				//	Check all the fields that they are correct
-				if(__ENTRY_FIELD_ERROR__ == $entry->checkPostData($_data,$errors)) continue;
+				if(__ENTRY_FIELD_ERROR__ == $entry->checkPostData($_post, $errors)) continue;
 
-				//	Okay, so all the fields have been validated individually, we are pretty much
-				//	right to push the data into the database
-				$_post = array_merge($_data,$_post);
+				if(__ENTRY_OK__ == $entry->setDataFromPost($_post, $errors, false, false)) {
+					//	Because we can't upload the file using the inbuilt function
+					//	we have to fake the expected output
+					$upload = $entry->getData($this->target_field->get('id'));
+					if (empty($upload['size'])) $upload['size'] = $file->size;
+					if (empty($upload['mimetype'])) $upload['mimetype'] = $file->mimetype;
+					if (empty($upload['meta'])) $upload['meta'] = serialize($this->target_field->getMetaInfo(WORKSPACE . $upload['file'], $file->mimetype));
+					$entry->setData($this->target_field->get('id'), $upload);
 
-				if(__ENTRY_OK__ == $this->setDataFromPost($entry, $_post, $errors, false, false)) {
 					if($entry->commit()) {
 						$file->hasUploaded();
 						$entries[] = $entry->get('id');
@@ -377,73 +365,5 @@
 				$entry->commit();
 			}
 		}
-
-		/*	Can't use the full Symphony set because field->processRawData will fail as the uploaded file
-		**	returns false, because it's not uploaded in this step, it's already been extracted.
-		*/
-		private function setDataFromPost($entry, $data, &$error, $simulate=false, $ignore_missing_fields=false){
-
-			$error = NULL;
-			$status = __ENTRY_OK__;
-
-			// Entry has no ID, create it:
-			if(!$entry->get('id') && $simulate == false) {
-
-				$entry->set('creation_date', DateTimeObj::get('Y-m-d H:i:s'));
-				$entry->set('creation_date_gmt', DateTimeObj::getGMT('Y-m-d H:i:s'));
-
-				Symphony::Database()->insert($entry->get(), 'tbl_entries');
-				if(!$entry_id = Symphony::Database()->getInsertID()) return __ENTRY_FIELD_ERROR__;
-				$entry->set('id', $entry_id);
-			}
-
-			$entryManager = new EntryManager($this->_Parent);
-			$section = $this->target_section;
-			$schema = $section->fetchFieldsSchema();
-
-			foreach($schema as $info){
-				$result = NULL;
-				$field = $entryManager->fieldManager->fetch($info['id']);
-
-				if($ignore_missing_fields && !isset($data[$field->get('element_name')])) continue;
-
-				//	If this field is an upload, don't call it's inherit functions, as they will fail
-				//	because it has already been uploaded.
-				if(General::validateString($field->get('type'), Extension_BulkImporter::$supported_fields['upload'])) {
-					$status = __ENTRY_OK__;
-					$result = $data[$field->get('element_name')];
-				}
-				else {
-					//	Check the field status
-					$result = $field->checkPostFieldData(
-						(isset($data[$info['element_name']]) ? $data[$info['element_name']] : NULL), $message, $entry->get('id')
-					);
-
-					if($result != Field::__OK__){
-						$status = __ENTRY_FIELD_ERROR__;
-						$error = array(
-							'field_id' => $info['id'],
-							'message' => $message
-						);
-
-						continue;
-					}
-
-					//	If everything is sweet, process the data
-					$result = $field->processRawFieldData(
-						(isset($data[$info['element_name']]) ? $data[$info['element_name']] : NULL), $s, false, $entry->get('id')
-					);
-				}
-
-				$entry->setData($info['id'], $result);
-			}
-
-			// Failed to create entry, cleanup
-			if($status != __ENTRY_OK__ && !is_null($entry_id)) {
-				Symphony::Database()->delete('tbl_entries', " `id` = '$entry_id' ");
-			}
-
-			return $status;
-		}
 	}
-?>
+
