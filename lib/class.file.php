@@ -32,11 +32,14 @@
 		 * Check that the file matches the validator as specified by the field
 		 *
 		 * @param Field $field
+		 * @param string $destination
 		 * @return boolean
 		 */
 		public function isValid(Field $field, $destination = NULL) {
-			$this->valid = false;
+			$this->valid = true;
 
+			// Check if file name length will not exceed maximum allowed by Upload field's database column.
+			// Upload field does not check that, so we have to do that here.
 			if (!empty($destination)) {
 				$this->valid = (strlen($destination) < 255 ? true : false);
 				if (!$this->valid) {
