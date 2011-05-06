@@ -300,9 +300,6 @@
 				$entry->set('section_id', $section->get('id'));
 				$entry->set('author_id', Administration::instance()->Author->get('id'));
 
-				// TODO: was this needed for anything?
-				//$_data[] = $section->get('id');
-
 				// Set the Name
 				if(!is_null($fields['name'])) {
 					$_post[$fields['name']->get('element_name')] = $file->name;
