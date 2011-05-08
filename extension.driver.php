@@ -293,7 +293,8 @@
 			foreach($this->files as $file) {
 				$path = '/';
 				if ($this->preserve_subdirectories) {
-					$path = dirname(substr($file->location, strlen($this->extracted_directory))) . '/';
+					$path = dirname(substr($file->location, strlen($this->extracted_directory)));
+					if ($path != '/') $path .= '/';
 				}
 				else if ($this->archive_is_parent) {
 					$path = '/' . $this->extracted_archive . '/';

@@ -81,7 +81,14 @@
 				// First "disable" form, just in case someone can click fast
 				form.bind('submit.bulkimporter', function(){return false;});
 
-				$('label.bulkimporter.added.files a', form).each(function(){
+				// Get item order
+				// For some reason, this will not find new items.
+				// So we get "old" items first, and then add new ones below.
+				var sortorder = selection.find('li').map(function() {
+					return $(this).attr('data-value');
+				}).get().join(',');
+
+				$('label.bulkimporter.added.files a', form).sort(function(a,b){return a.innerHTML > b.innerHTML ? 1 : -1;}).each(function(){
 					var id = $(this).attr('href').match(/\d+/g);
 
 					// Fetch item id
@@ -91,15 +98,20 @@
 
 					// Subsection manager looks for last number in "action" attribute
 					form.attr('action', 'dummy://' + id);
-					var uploadeditem = $('<li><span>NEW ITEM</span></li>').appendTo(selection);
+					var uploadeditem = $('<li><span></span></li>').appendTo(selection);
 					if (stage.is('.destructable')) {
 						$('<a class="destructor">&#215;</a>').appendTo(uploadeditem);
 					}
 					stage.trigger('edit', [uploadeditem, iframe]);
+
+					sortorder += (sortorder == '' ? '' : ',') + id;
 				});
 
 				form.unbind('submit.bulkimporter');
 				item.trigger('destruct');
+
+				// Save sortorder				
+				stage.parents('div.field-subsectionmanager').find('input[name*="sort_order"]').val(sortorder);
 			}
 		};
 
