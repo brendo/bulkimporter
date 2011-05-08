@@ -52,7 +52,7 @@
 
 		public function setErrors($errors) {
 			if (is_array($errors)) {
-				$this->errors = aray_merge($this->errors, $errors);
+				$this->errors = array_merge($this->errors, $errors);
 			}
 			else {
 				$this->errors[] = $errors;

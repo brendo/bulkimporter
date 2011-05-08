@@ -24,6 +24,7 @@
 		public $target_field = null;
 		public $linked_entry = null;
 		public $files = array();
+		public $entries = array();
 
 	/*-------------------------------------------------------------------------
 		Definition:
@@ -83,6 +84,12 @@
 			if ($page instanceof contentExtensionBulkImporterImport) {
 				$page->addStylesheetToHead(URL . '/extensions/bulkimporter/assets/default.css','screen', 100);
 				$page->addScriptToHead(URL . '/extensions/bulkimporter/assets/default.js', 101);
+			}
+			else {
+				$callback = Symphony::Engine()->getPageCallback();
+				if ($callback['driver'] != 'publish' || !is_array($callback['context'])) return;
+				$page->addStylesheetToHead(URL . '/extensions/bulkimporter/assets/bulkimporter.publish.css','screen', 200);
+				$page->addScriptToHead(URL . '/extensions/bulkimporter/assets/bulkimporter.publish.js', 201);
 			}
 	    }
 
@@ -362,7 +369,7 @@
 
 					if($entry->commit()) {
 						$file->hasUploaded();
-						$entries[] = $entry->get('id');
+						$entries[$final_destination] = $entry->get('id');
 
 						/**
 						 * Creation of an Entry. New Entry object is provided.
@@ -399,6 +406,8 @@
 				$entry->setData($this->linked_entry['linked-field'], $result);
 				$entry->commit();
 			}
+
+			$this->entries = $entries;
 		}
 	}
 
