@@ -14,27 +14,44 @@
 			'Single entry': false
 		});
 
+		var root = Symphony.Context.get('root');
+
+
+		// Add submenu only for SubsectionManager fields that have "create" button.
 		$('div.field.field-subsectionmanager div.stage div.queue a.create').each(function(){
 			var a = $(this),
 				parent = a.parent(),
-				submenu = $('div.submenu', parent);
+				submenu = $('div.submenu', parent),
+				field = a.parents('div.field-subsectionmanager'),
+				field_id = field.attr('id').replace(/^field-/, ''),
+				section_id = $('input[name="fields\\[subsection_id\\]\\['+field_id+'\\]"]', field).val();
 
-			if (!parent.is('div.menu')) {
-				a.wrap('<div class="menu"/>');
-				parent = a.parent();
-			}
+			$.get(
+				root + '/symphony/extension/bulkimporter/ajaxsectioninfo/',
+				{section: section_id},
+				function(data) {
+					// Fields
+					if ($(data).find('field').length > 0) {
+						if (!parent.is('div.menu')) {
+							a.wrap('<div class="menu"/>');
+							parent = a.parent();
+						}
 
-			if (submenu.length < 1) {
-				submenu = $('<div class="submenu"/>').insertAfter(a);
-			}
+						if (submenu.length < 1) {
+							submenu = $('<div class="submenu"/>').insertAfter(a);
+						}
 
-			if ($('a.option.single', parent).length < 1) {
-				a.clone().addClass('option single').html(Symphony.Language.get('Single entry')).appendTo(submenu);
-			}
+						if ($('a.option.single', parent).length < 1) {
+							a.clone().addClass('option single').html(Symphony.Language.get('Single entry')).appendTo(submenu);
+						}
 
-			if ($('a.option.bulkimporter', parent).length < 1) {
-				$('<a class="import option bulkimporter">'+Symphony.Language.get('Bulk Import')+'</a>').appendTo(submenu);
-			}
+						if ($('a.option.bulkimporter', parent).length < 1) {
+							$('<a class="import option bulkimporter">'+Symphony.Language.get('Bulk Import')+'</a>').appendTo(submenu);
+						}
+					}
+				},
+				'xml'
+			);
 		});
 
 		// Load() mostly from subsectionmanager.publish.js
@@ -45,7 +62,7 @@
 				form = content.find('form');
 
 			// Adjust interface
-			content.find('head').prepend('<link rel="stylesheet" type="text/css" media="screen" href="'+Symphony.Context.get('root')+'/extensions/subsectionmanager/assets/subsection.publish.css">');
+			content.find('head').prepend('<link rel="stylesheet" type="text/css" media="screen" href="'+root+'/extensions/subsectionmanager/assets/subsection.publish.css">');
 			content.find('body').addClass('inline subsection');
 			content.find('h1, h2, #nav, #notice:not(.error):not(.success), #notice a, #footer').remove();
 			form.find('label').insertBefore(form.find('div.actions'));
@@ -115,7 +132,7 @@
 			}
 		};
 
-		$('div.field.field-subsectionmanager div.stage div.queue div.menu div.submenu').delegate('a.import.bulkimporter', 'click.stage', function(){
+		$('div.field.field-subsectionmanager div.stage div.queue').delegate(' div.menu div.submenu a.import.bulkimporter', 'click.stage', function(){
 			event.preventDefault();
 
 			var stage = $(this).parents('div.stage'),
@@ -154,7 +171,6 @@
 
 			var editor = drawer.clone().hide().addClass('new'),
 				env = Symphony.Context.get('env'),
-				root = Symphony.Context.get('root'),
 				field = stage.parents('div.field-subsectionmanager'),
 				field_id = field.attr('id').replace(/^field-/, ''),
 				section_id = $('input[name="fields\\[subsection_id\\]\\['+field_id+'\\]"]', field).val();
