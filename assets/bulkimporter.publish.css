@@ -1,0 +1,86 @@
+@charset "utf-8";
+
+/**
+ * Bulk Importer - Subsection Manager bridge for Symphony
+ *
+ * @author: Marcin Konicki, ahwayakchih@neoni.net
+ * @source: http://github.com/brendo/bulkimporter
+ */
+
+div.stage div.queue div.menu > a.create:after {
+	content: ' ↓';
+}
+
+div.stage div.queue div.menu {
+	position: relative;
+}
+
+div.stage div.queue div.menu div.submenu {
+	display: none;
+}
+
+div.stage div.queue div.menu:hover div.submenu {
+	position: absolute;
+	display: block;
+	top: 7px;
+	right: 12px;
+	margin-top: 1em;
+	background: transparent;
+	z-index: 99;
+}
+
+div.stage div.queue div.menu:hover > a.create {
+	border: 1px solid #81b934;
+	color: #fff;
+	background: #81b934;
+	border-bottom-left-radius: 0;
+	-moz-border-bottom-left-radius: 0;
+	-webkit-border-bottom-left-radius: 0;
+	border-bottom-right-radius: 0;
+	-moz-border-bottom-right-radius: 0;
+	-webkit-border-bottom-right-radius: 0;
+}
+
+div.stage div.queue div.menu div.submenu a.option {
+	display: block;
+	float: none;
+}
+
+/* Copy rules from stage.publish.css */
+div.stage div.queue div.menu div.submenu a.option, div.stage div.queue div.menu div.submenu a.create.option {
+	margin: 0px;
+	border: 1px solid #81b934;
+	border-radius: 0;
+	-moz-border-radius: 0;
+	-webkit-border-radius: 0;
+	padding: 3px 15px 4px;
+	color: #fff;
+	background: #81b934;
+	cursor: pointer;
+	line-height: 1;
+	font-size: 0.95em;
+	text-decoration: none;
+	height: 10px;
+}
+
+div.stage div.queue div.menu div.submenu a.option:first-child {
+	border-top-left-radius: 1em;
+	-moz-border-top-left-radius: 1em;
+	-webkit-border-top-left-radius: 1em;
+}
+
+div.stage div.queue div.menu div.submenu a.option:last-child {
+	border-bottom-left-radius: 1em;
+	-moz-border-bottom-left-radius: 1em;
+	-webkit-border-bottom-left-radius: 1em;
+	border-bottom-right-radius: 1em;
+	-moz-border-bottom-right-radius: 1em;
+	-webkit-border-bottom-right-radius: 1em;
+}
+
+/* "Highlight" color copied from dashboard.index.css */
+div.stage div.queue div.menu div.submenu a.option:hover {
+	border: 1px solid #6c9c29;
+	color: #fff;
+	background: #6c9c29;
+}

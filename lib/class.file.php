@@ -6,6 +6,7 @@
 		protected $location;
 		protected $imported = false;
 		protected $valid = true;
+		protected $errors;
 
 		public function __construct(SplFileInfo $file) {
 			$this->file = $file;
@@ -15,6 +16,8 @@
 				'/\.' . preg_quote(General::getExtension($file)) . '$/',
 				null, $file->getFilename()
 			);
+
+			$this->errors = array();
 		}
 
 		/**
@@ -29,14 +32,31 @@
 		 * Check that the file matches the validator as specified by the field
 		 *
 		 * @param Field $field
+		 * @param string $destination
 		 * @return boolean
 		 */
-		public function isValid(Field $field) {
-			if(is_null($field->get('validator'))) return $this->valid;
+		public function isValid(Field $field, $destination = NULL) {
+			$this->valid = true;
 
-			$this->valid = General::validateString($this->extension, $field->get('validator'));
+			// Check if file name length will not exceed maximum allowed by Upload field's database column.
+			// Upload field does not check that, so we have to do that here.
+			if (!empty($destination)) {
+				$this->valid = (strlen($destination) < 255 ? true : false);
+				if (!$this->valid) {
+					$this->errors[] = __("Length of file name chosen in '%s' exceeds maximum allowed for that field.", array($field->get('label')));
+				}
+			}
 
 			return $this->valid;
+		}
+
+		public function setErrors($errors) {
+			if (is_array($errors)) {
+				$this->errors = array_merge($this->errors, $errors);
+			}
+			else {
+				$this->errors[] = $errors;
+			}
 		}
 
 		public function __get($name) {
@@ -54,6 +74,10 @@
 			
 			if($name == "rawname") {
 				return $this->file->getFilename();
+			}
+
+			if($name == "errors") {
+				return $this->errors;
 			}
 
 			return $this->$name;

@@ -9,6 +9,7 @@
 
 		protected static $target = '/uploads/bulkimporter';
 		public $extracted_directory = null;
+		public $extracted_archive = null;
 
 		public static $supported_fields = array(
 			'upload' => '/upload/i',
@@ -16,17 +17,21 @@
 			'section' => '/selectbox_link|referencelink|subsectionmanager|bilink/i'
 		);
 
+		public $preserve_subdirectories = false;
+		public $archive_is_parent = false;
+
 		public $target_section = null;
 		public $target_field = null;
 		public $linked_entry = null;
 		public $files = array();
+		public $entries = array();
 
 	/*-------------------------------------------------------------------------
 		Definition:
 	-------------------------------------------------------------------------*/
 		public function about() {
 			return array(
-				'name'			=> 'Bulk Importer',
+				'name'			=> __('Bulk Importer'),
 				'version'		=> '0.9.2',
 				'release-date'	=> '2010-03-15',
 				'author'		=> array(
@@ -34,8 +39,8 @@
 					'website'		=> 'http://www.bloodbone.ws',
 					'email'			=> 'brendan@bloodbone.ws'
 				),
-				'description'	=> 'Imports an archive of files into a chosen section as individual entries
-				with the option to link the newly created entries with another entry'
+				'description'	=> __('Imports an archive of files into a chosen section as individual entries
+				with the option to link the newly created entries with another entry')
 	 		);
 		}
 
@@ -67,7 +72,7 @@
 			return array(
 				array(
 					'location'	=> __('System'),
-					'name'	=> 'Bulk Importer',
+					'name'	=> __('Bulk Importer'),
 					'link'	=> '/import/'
 				)
 			);
@@ -79,6 +84,12 @@
 			if ($page instanceof contentExtensionBulkImporterImport) {
 				$page->addStylesheetToHead(URL . '/extensions/bulkimporter/assets/default.css','screen', 100);
 				$page->addScriptToHead(URL . '/extensions/bulkimporter/assets/default.js', 101);
+			}
+			else {
+				$callback = Symphony::Engine()->getPageCallback();
+				if ($callback['driver'] != 'publish' || !is_array($callback['context'])) return;
+				$page->addStylesheetToHead(URL . '/extensions/bulkimporter/assets/bulkimporter.publish.css','screen', 200);
+				$page->addScriptToHead(URL . '/extensions/bulkimporter/assets/bulkimporter.publish.js', 201);
 			}
 	    }
 
@@ -217,7 +228,14 @@
 			// The directory where the extracted zip contents should go to.
 			$this->extracted_directory = $target;
 
-			$zipManager->extractTo($this->extracted_directory);
+			$path = '';
+			if ($this->archive_is_parent) {
+				$path = '/' . preg_replace('/\.[^\.]+$/', '', basename($uploadedZipPath));
+				$this->extracted_archive = basename($path);
+				if(!file_exists($this->extracted_directory . $path)) General::realiseDirectory($this->extracted_directory . $path);
+			}
+
+			$zipManager->extractTo($this->extracted_directory . $path);
 			$zipManager->close();
 
 			// Delete the zip file
@@ -273,71 +291,102 @@
 			}
 
 			foreach($this->files as $file) {
-				if(!$file->isValid($this->target_field)) continue;
+				$path = '/';
+				if ($this->preserve_subdirectories) {
+					$path = dirname(substr($file->location, strlen($this->extracted_directory)));
+					if ($path != '/') $path .= '/';
+				}
+				else if ($this->archive_is_parent) {
+					$path = '/' . $this->extracted_archive . '/';
+				}
 
-				$_data = $_post = array();
+				$final_destination = preg_replace("/^\/workspace/", '', $this->target_field->get('destination')) . $path . $file->rawname;
+				if(!$file->isValid($this->target_field, $final_destination)) continue;
+
+				$_post = array();
 				$entry = $entryManager->create();
 				$entry->set('section_id', $section->get('id'));
-				$entry->set('author_id', $this->_Parent->Author->get('id'));
-
-				$_data[] = $section->get('id');
+				$entry->set('author_id', Administration::instance()->Author->get('id'));
 
 				// Set the Name
 				if(!is_null($fields['name'])) {
-					$_data[$fields['name']->get('element_name')] = $file->name;
+					$_post[$fields['name']->get('element_name')] = $file->name;
 				}
 
 				// Set the Upload Field
 				if(is_null($fields['upload'])) {
-					throw new Exception(__('No valid upload field found in the <code>%</code>', array($section->get('name'))));
+					throw new Exception(__('No valid upload field found in the <code>%s</code>', array($section->get('name'))));
 				}
 
-				$final_destination = preg_replace("/^\/workspace/", '', $this->target_field->get('destination')) . '/' . $file->rawname;
+				$_post[$this->target_field->get('element_name')] = $final_destination;
 
-				$_data[$fields['upload']->get('element_name')] = array(
-					'name' => $file->rawname,
-					'type' => $file->mimetype,
-					'tmp_name' => $file->location,
-					'error' => 0,
-					'size' => $file->size
-				);
-
-				//	Because we can't upload the file using the inbuilt function
-				//	we have to fake the expected output
-				$_post[$fields['upload']->get('element_name')] = array(
-					'file' 		=> $final_destination,
-					'size' 		=> $file->size,
-					'mimetype' 	=> $file->mimetype,
-					'meta' 		=> serialize(
-						$fields['upload']->getMetaInfo($file->location, $file->mimetype)
-					)
+				// Cache some info, before we move file
+				// https://github.com/brendo/bulkimporter/pull/7#issuecomment-1105691
+				$meta = array(
+					'size' => $file->size,
+					'mimetype' => $file->mimetype,
+					'meta' => serialize($this->target_field->getMetaInfo($file->location, $file->mimetype))
 				);
 
 				// Move the image from it's bulk-imported location
-				if(!file_exists(DOCROOT . $this->target_field->get('destination'))) {
-					General::realiseDirectory(DOCROOT . $this->target_field->get('destination'));
-
-					chmod(DOCROOT . $this->target_field->get('destination'), intval(0755, 8));
+				$path = WORKSPACE . dirname($final_destination);
+				if(!file_exists($path)) {
+					General::realiseDirectory($path);
+					chmod($path, intval(0755, 8));
 				}
 
-				if(rename($file->location, DOCROOT . "/workspace" . $final_destination)) {
-					chmod(DOCROOT . "/workspace" . $final_destination, intval(0755, 8));
+				if(rename($file->location, WORKSPACE . $final_destination)) {
+					chmod(WORKSPACE . $final_destination, intval(0755, 8));
 				}
 
 				$errors = array();
 
 				//	Check all the fields that they are correct
-				if(__ENTRY_FIELD_ERROR__ == $entry->checkPostData($_data,$errors)) continue;
+				if(__ENTRY_FIELD_ERROR__ == $entry->checkPostData($_post, $errors)) {
+					if (!empty($errors)) $file->setErrors($errors);
+					continue;
+				}
 
-				//	Okay, so all the fields have been validated individually, we are pretty much
-				//	right to push the data into the database
-				$_post = array_merge($_data,$_post);
+				if(__ENTRY_OK__ == $entry->setDataFromPost($_post, $errors, false, false)) {
+					//	Because we can't upload the file using the inbuilt function
+					//	we have to fake the expected output
+					$upload = $entry->getData($this->target_field->get('id'));
+					foreach ($meta as $key => $value) {
+						if (empty($upload[$key])) $upload[$key] = $value;
+					}
+					$entry->setData($this->target_field->get('id'), $upload);
 
-				if(__ENTRY_OK__ == $this->setDataFromPost($entry, $_post, $errors, false, false)) {
+					/**
+					 * Just prior to creation of an Entry
+					 *
+					 * @delegate EntryPreCreate
+					 * @param string $context
+					 * '/publish/new/'
+					 * @param Section $section
+					 * @param Entry $entry
+					 * @param array $fields
+					 */
+					Symphony::ExtensionManager()->notifyMembers('EntryPreCreate', '/publish/new/', array('section' => $section, 'entry' => &$entry, 'fields' => &$_post));
+
 					if($entry->commit()) {
 						$file->hasUploaded();
-						$entries[] = $entry->get('id');
+						$entries[$final_destination] = $entry->get('id');
+
+						/**
+						 * Creation of an Entry. New Entry object is provided.
+						 *
+						 * @delegate EntryPostCreate
+						 * @param string $context
+						 * '/publish/new/'
+						 * @param Section $section
+						 * @param Entry $entry
+						 * @param array $fields
+						 */
+						Symphony::ExtensionManager()->notifyMembers('EntryPostCreate', '/publish/new/', array('section' => $section, 'entry' => $entry, 'fields' => $_post));
 					}
+				}
+				else {
+					$file->setErrors(__('Could not save entry in the <code>%s</code>', array($section->get('name'))));
 				}
 			}
 
@@ -358,74 +407,8 @@
 				$entry->setData($this->linked_entry['linked-field'], $result);
 				$entry->commit();
 			}
-		}
 
-		/*	Can't use the full Symphony set because field->processRawData will fail as the uploaded file
-		**	returns false, because it's not uploaded in this step, it's already been extracted.
-		*/
-		private function setDataFromPost($entry, $data, &$error, $simulate=false, $ignore_missing_fields=false){
-
-			$error = NULL;
-			$status = __ENTRY_OK__;
-
-			// Entry has no ID, create it:
-			if(!$entry->get('id') && $simulate == false) {
-
-				$entry->set('creation_date', DateTimeObj::get('Y-m-d H:i:s'));
-				$entry->set('creation_date_gmt', DateTimeObj::getGMT('Y-m-d H:i:s'));
-
-				Symphony::Database()->insert($entry->get(), 'tbl_entries');
-				if(!$entry_id = Symphony::Database()->getInsertID()) return __ENTRY_FIELD_ERROR__;
-				$entry->set('id', $entry_id);
-			}
-
-			$entryManager = new EntryManager($this->_Parent);
-			$section = $this->target_section;
-			$schema = $section->fetchFieldsSchema();
-
-			foreach($schema as $info){
-				$result = NULL;
-				$field = $entryManager->fieldManager->fetch($info['id']);
-
-				if($ignore_missing_fields && !isset($data[$field->get('element_name')])) continue;
-
-				//	If this field is an upload, don't call it's inherit functions, as they will fail
-				//	because it has already been uploaded.
-				if(General::validateString($field->get('type'), Extension_BulkImporter::$supported_fields['upload'])) {
-					$status = __ENTRY_OK__;
-					$result = $data[$field->get('element_name')];
-				}
-				else {
-					//	Check the field status
-					$result = $field->checkPostFieldData(
-						(isset($data[$info['element_name']]) ? $data[$info['element_name']] : NULL), $message, $entry->get('id')
-					);
-
-					if($result != Field::__OK__){
-						$status = __ENTRY_FIELD_ERROR__;
-						$error = array(
-							'field_id' => $info['id'],
-							'message' => $message
-						);
-
-						continue;
-					}
-
-					//	If everything is sweet, process the data
-					$result = $field->processRawFieldData(
-						(isset($data[$info['element_name']]) ? $data[$info['element_name']] : NULL), $s, false, $entry->get('id')
-					);
-				}
-
-				$entry->setData($info['id'], $result);
-			}
-
-			// Failed to create entry, cleanup
-			if($status != __ENTRY_OK__ && !is_null($entry_id)) {
-				Symphony::Database()->delete('tbl_entries', " `id` = '$entry_id' ");
-			}
-
-			return $status;
+			$this->entries = $entries;
 		}
 	}
-?>
+
