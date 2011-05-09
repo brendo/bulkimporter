@@ -14,7 +14,7 @@
 			'Single entry': false
 		});
 
-		$('div.stage div.queue a.create').each(function(){
+		$('div.field.field-subsectionmanager div.stage div.queue a.create').each(function(){
 			var a = $(this),
 				parent = a.parent(),
 				submenu = $('div.submenu', parent);
@@ -115,7 +115,7 @@
 			}
 		};
 
-		$('div.stage div.queue div.menu div.submenu').delegate('a.import.bulkimporter', 'click.stage', function(){
+		$('div.field.field-subsectionmanager div.stage div.queue div.menu div.submenu').delegate('a.import.bulkimporter', 'click.stage', function(){
 			event.preventDefault();
 
 			var stage = $(this).parents('div.stage'),
