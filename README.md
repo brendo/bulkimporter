@@ -6,10 +6,10 @@ added to the first instance of a "text input" style field. Optionally, you can l
 newly imported entries to another entry using either the Select Box Link, Reference Link
 or Subsection Manager extensions.
 
-- Version: 0.9.2
-- Date: 15 March 2011
-- Requirements: Symphony 2.0.8 or newer, <http://github.com/symphonycms/symphony-2/>
-- Author: Brendan Abbott, brendan@bloodbone.ws
+- Version: 0.9.3pre
+- Date: unreleased
+- Requirements: Symphony 2.2 or newer, <http://github.com/symphonycms/symphony-2/>
+- Author: Brendan Abbott <brendan@bloodbone.ws>
 - GitHub Repository: <https://github.com/brendo/bulk-importer>
 
 ## INSTALLATION

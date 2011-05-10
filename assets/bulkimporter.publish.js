@@ -1,7 +1,7 @@
 (function($) {
 
 	/**
-	 * This plugin adds Bulk Import option to Sybsection Manager field.
+	 * This plugin adds Bulk Import option to Subsection Manager field.
 	 *
 	 * @author: Marcin Konicki, ahwayakchih@neoni.net
 	 * @source: http://github.com/brendo/bulkimporter

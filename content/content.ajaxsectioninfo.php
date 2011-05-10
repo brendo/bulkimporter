@@ -50,8 +50,7 @@
 			}
 
 			// Check for Subsection Manager
-			$extensionManager = new ExtensionManager($this->_Parent);
-			if($extensionManager->fetchStatus('subsectionmanager') == EXTENSION_ENABLED) {
+			if(Symphony::ExtensionManager()->fetchStatus('subsectionmanager') == EXTENSION_ENABLED) {
 				$associations = Symphony::Database()->fetch(sprintf("
 						SELECT
 							`field_id`
@@ -78,7 +77,7 @@
 			}
 
 			// Check for BiLink
-			if($extensionManager->fetchStatus('bilinkfield') == EXTENSION_ENABLED) {
+			if(Symphony::ExtensionManager()->fetchStatus('bilinkfield') == EXTENSION_ENABLED) {
 				$associations = Symphony::Database()->fetch(sprintf("
 						SELECT
 							`field_id`
@@ -107,4 +106,3 @@
 		}
 
 	}
-

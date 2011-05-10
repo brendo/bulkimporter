@@ -6,10 +6,21 @@
 	class contentExtensionBulkImporterImport extends AdministrationPage {
 		protected $_driver;
 		protected $_errors;
+		protected static $sectionManager = null;
+		protected static $fieldManager = null;
+		protected static $entryManager = null;
+
+		public function __construct(Administration &$parent){
+			parent::__construct($parent);
+
+			self::$sectionManager = new SectionManager(Administration::instance());
+			self::$fieldManager = new FieldManager(Administration::instance());
+			self::$entryManager = new FieldManager(Administration::instance());
+
+			$this->_driver = Symphony::ExtensionManager()->create('bulkimporter');
+		}
 
 		public function __viewIndex() {
-			$this->_driver = $this->_Parent->ExtensionManager->create('bulkimporter');
-
 			$this->setPageType('form');
 			$this->Form->setAttribute('enctype', 'multipart/form-data');
 			$this->setTitle(__('%1$s &ndash; %2$s', array(__('Symphony'), __('Bulk Importer'))));
@@ -122,8 +133,6 @@
 		public function __viewIndexCreatedEntries($wrapper, array $entries) {
 			if (empty($entries) || !is_array($entries)) return;
 
-			$entryManager = new EntryManager(Symphony::Engine());
-
 			$label = Widget::Label('');
 			$label->setAttribute('class', 'bulkimporter added files');
 
@@ -134,8 +143,8 @@
 			foreach ($entries as $path => $entry_id) {
 				// Get field id from first entry
 				if (empty($section_handle)) {
-					$section_id = $entryManager->fetchEntrySectionID($entry_id);
-					$section = $entryManager->sectionManager->fetch($section_id);
+					$section_id = self::$entryManager->fetchEntrySectionID($entry_id);
+					$section = self::$sectionManager->fetch($section_id);
 					$section_handle = $section->get('handle');
 				}
 
@@ -151,13 +160,11 @@
 		}
 
 		public function __viewIndexSectionName($wrapper) {
-			$sectionManager = new SectionManager($this->_Parent);
-
 			// Label
 			$label = Widget::Label(__('Import files to this section:'));
 
 			// Fetch sections & populate a dropdown
-			$sections = $sectionManager->fetch(NULL, 'ASC', 'name');
+			$sections = self::$sectionManager->fetch(NULL, 'ASC', 'name');
 			$options = array();
 
 			if(is_array($sections) && !empty($sections)) foreach($sections as $s) {
@@ -172,14 +179,11 @@
 		}
 
 		public function __viewIndexSectionFields($wrapper) {
-			$sectionManager = new SectionManager($this->_Parent);
-
 			$options = array();
 			if (!empty($_GET['prepopulate']['target'])) {
-				$fieldManager = new FieldManager($this->_Parent);
 
 				// Fetch sections & populate a dropdown with the available upload fields
-				$section = $sectionManager->fetch($_GET['prepopulate']['target']);
+				$section = self::$sectionManager->fetch($_GET['prepopulate']['target']);
 				if (!empty($section)) {
 					foreach($section->fetchFields() as $field) {
 						if(!preg_match(Extension_BulkImporter::$supported_fields['upload'], $field->get('type'))) continue;
@@ -219,8 +223,6 @@
 		}
 
 		public function __viewIndexLinkedEntries($wrapper) {
-			$sectionManager = new SectionManager($this->_Parent);
-
 			$options = array();
 			if (!empty($_GET['prepopulate']['linked-section-field'])) {
 				$options = $this->getLinkedEntries($_GET['prepopulate']['linked-section-field'], $_GET['prepopulate']['linked-entry']);
@@ -258,19 +260,13 @@
 		}
 
 		public function __actionIndex() {
-			if (empty($this->_driver)) {
-				$this->_driver = $this->_Parent->ExtensionManager->create('bulkimporter');
-			}
-
 			if (isset($_POST['action']) && array_key_exists('save', $_POST['action'])) {
 				$this->prepareUpload($_POST['fields']);
 			}
 		}
 
 		public function prepareUpload($post) {
-			$sectionManager = new SectionManager($this->_Parent);
-			$fieldManager = new FieldManager($this->_Parent);
-			$section = $sectionManager->fetch($post['target']);
+			$section = self::$sectionManager->fetch($post['target']);
 
 			$this->_driver->target_section = $section;
 			$this->_driver->linked_entry = array(
@@ -280,7 +276,7 @@
 			$this->_driver->preserve_subdirectories = ($post['preserve_subdirectories'] == 'yes' ? true : false);
 			$this->_driver->archive_is_parent = ($post['archive_is_parent'] == 'yes' ? true : false);
 
-			$field = (isset($post['target-field'])) ? $fieldManager->fetch($post['target-field']) : null;
+			$field = (isset($post['target-field'])) ? self::$fieldManager->fetch($post['target-field']) : null;
 
 			if(is_null($field)) {
 				$this->pageAlert(
@@ -301,7 +297,7 @@
 
 			// Create entries in the target section for each of the	uploaded files
 			try {
-				$this->_driver->commitFiles($this->_Parent);
+				$this->_driver->commitFiles();
 			}
 			catch (Exception $ex) {
 				$this->pageAlert(
@@ -347,8 +343,6 @@
 			if (empty($section)) return array();
 
 			$options = array();
-			$sectionManager = new SectionManager(Symphony::Engine());
-			$fieldManager = new FieldManager(Symphony::Engine());
 
 			// Check to see if any Sections link to this using the Section Associations table
 			$associations = Symphony::Database()->fetch(sprintf("
@@ -362,18 +356,17 @@
 			));
 
 			if(is_array($associations) && !empty($associations)) foreach($associations as $related_field) {
-				$field = $fieldManager->fetch($related_field['child_section_field_id']);
+				$field = self::$fieldManager->fetch($related_field['child_section_field_id']);
 
 				if(!preg_match(Extension_BulkImporter::$supported_fields['section'], $field->get('type'))) continue;
 
 				$options[] = array(
-					$field->get('id'), ($selected == $field->get('id')), $sectionManager->fetch($field->get('parent_section'))->get('name') . ': ' . General::sanitize($field->get('label'))
+					$field->get('id'), ($selected == $field->get('id')), self::$sectionManager->fetch($field->get('parent_section'))->get('name') . ': ' . General::sanitize($field->get('label'))
 				);
 			}
 
 			// Check for Subsection Manager
-			$extensionManager = new ExtensionManager(Symphony::Engine());
-			if($extensionManager->fetchStatus('subsectionmanager') == EXTENSION_ENABLED) {
+			if(Symphony::ExtensionManager()->fetchStatus('subsectionmanager') == EXTENSION_ENABLED) {
 				$associations = Symphony::Database()->fetch(sprintf("
 						SELECT
 							`field_id`
@@ -385,18 +378,18 @@
 				));
 
 				if(is_array($associations) && !empty($associations)) foreach($associations as $related_field) {
-					$field = $fieldManager->fetch($related_field['field_id']);
+					$field = self::$fieldManager->fetch($related_field['field_id']);
 
 					if(!preg_match(Extension_BulkImporter::$supported_fields['section'], $field->get('type'))) continue;
 
 					$options[] = array(
-						$field->get('id'), ($selected == $field->get('id')), $sectionManager->fetch($field->get('parent_section'))->get('name') . ': ' . General::sanitize($field->get('label'))
+						$field->get('id'), ($selected == $field->get('id')), self::$sectionManager->fetch($field->get('parent_section'))->get('name') . ': ' . General::sanitize($field->get('label'))
 					);
 				}
 			}
 
 			// Check for BiLink
-			if($extensionManager->fetchStatus('bilinkfield') == EXTENSION_ENABLED) {
+			if(Symphony::ExtensionManager()->fetchStatus('bilinkfield') == EXTENSION_ENABLED) {
 				$associations = Symphony::Database()->fetch(sprintf("
 						SELECT
 							`field_id`
@@ -408,12 +401,12 @@
 				));
 
 				if(is_array($associations) && !empty($associations)) foreach($associations as $related_field) {
-					$field = $fieldManager->fetch($related_field['field_id']);
+					$field = self::$fieldManager->fetch($related_field['field_id']);
 
 					if(!preg_match(Extension_BulkImporter::$supported_fields['section'], $field->get('type'))) continue;
 
 					$options[] = array(
-						$field->get('id'), ($selected == $field->get('id')), $sectionManager->fetch($field->get('parent_section'))->get('name') . ': ' . General::sanitize($field->get('label'))
+						$field->get('id'), ($selected == $field->get('id')), self::$sectionManager->fetch($field->get('parent_section'))->get('name') . ': ' . General::sanitize($field->get('label'))
 					);
 				}
 			}
@@ -425,15 +418,14 @@
 			if (empty($field)) return array();
 
 			$options = array();
-			$entryManager = new EntryManager(Symphony::Engine());
 
-			$field = $entryManager->fieldManager->fetch($field);
-			$section = $entryManager->sectionManager->fetch($field->get('parent_section'));
+			$field = self::$entryManager->fieldManager->fetch($field);
+			$section = self::$sectionManager->fetch($field->get('parent_section'));
 
 			$entry_column = current($section->fetchVisibleColumns());
 
 			//	Display the first column from every entry in the linked section
-			$entries = $entryManager->fetch(null, $field->get('parent_section'));
+			$entries = self::$entryManager->fetch(null, $field->get('parent_section'));
 
 			foreach($entries as $entry) {
 				$values = $entry->getData($entry_column->get('id'));

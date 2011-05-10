@@ -22,12 +22,13 @@
 			fields.attr('disabled', false).empty();
 			linked.attr('disabled', false).empty();
 
-			$.get(
-				'../ajaxsectioninfo/',
-				{section: sectionID},
+			$.get('../ajaxsectioninfo/', {
+					section: sectionID
+				},
 				function(data) {
-					field_opts = "";
-					section_opts = "";
+					var field_opts = "",
+						section_opts = "",
+						can_proceed = true;
 
 					// Fields
 					$(data).find('field').each(function() {
@@ -36,11 +37,14 @@
 
 					if(field_opts == "") {
 						field_opts += "<option value=''>" + Symphony.Language.get('No valid upload field found') + "</option>";
+						can_proceed = false;
 					}
 
 					fields.parent().slideDown("fast", function() {
 						fields.append(field_opts);
 					});
+
+					if(can_proceed === false) return;
 
 					// Related Sections
 					$(data).find('section').each(function() {
@@ -55,7 +59,6 @@
 							linked.append(section_opts);
 						});
 					}
-
 				},
 				'xml'
 			);
@@ -70,14 +73,12 @@
 
 			entries.attr("disabled",false).empty();
 
-			$.get(
-				"../ajaxentries/",
-				{
+			$.get("../ajaxentries/", {
 					section: sectionID,
 					field: fieldID
 				},
 				function(data) {
-					entry_opts = "";
+					var entry_opts = "";
 
 					$(data).find('entry').each(function() {
 						entry_opts += "<option value='" + $(this).attr('id') + "'>" + $(this).text() + "</option>";

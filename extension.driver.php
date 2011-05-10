@@ -32,12 +32,18 @@
 		public function about() {
 			return array(
 				'name'			=> __('Bulk Importer'),
-				'version'		=> '0.9.2',
-				'release-date'	=> '2010-03-15',
+				'version'		=> '0.9.3pre',
+				'release-date'	=> 'unreleased',
 				'author'		=> array(
-					'name'			=> 'Brendan Abbott',
-					'website'		=> 'http://www.bloodbone.ws',
-					'email'			=> 'brendan@bloodbone.ws'
+					array(
+						'name'			=> 'Brendan Abbott',
+						'website'		=> 'http://www.bloodbone.ws',
+						'email'			=> 'brendan@bloodbone.ws'
+					),
+					array(
+						'name'			=> 'Marcin Konicki',
+						'email'			=> 'ahwayakchih@neoni.net'
+					)
 				),
 				'description'	=> __('Imports an archive of files into a chosen section as individual entries
 				with the option to link the newly created entries with another entry')
@@ -260,10 +266,11 @@
 			return (boolean)file_put_contents($this->getTarget() . "log.txt", $entry, FILE_APPEND);
 		}
 
-		/*	Creates a new entry foreach valid file in the $target_section */
-		public function commitFiles($parent) {
-			$this->_Parent = $parent;
-			$entryManager = new EntryManager($this->_Parent);
+		/**
+		 * Creates a new entry for each valid file in the `$target_section`
+		 */
+		public function commitFiles() {
+			$entryManager = new EntryManager(Administration::instance());
 			$section = $this->target_section;
 
 			// This is the default field instances that will populated with data.
