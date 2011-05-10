@@ -327,7 +327,7 @@
 
 			if($uploaded == 0) {
 				$this->pageAlert(
-					__("No files were uploaded, %d failed", array($failed)),
+					__("No files were uploaded, %d failed. <a href='#error'>See below for details.</a>", array($failed)),
 					Alert::ERROR
 				);
 			}

@@ -24,10 +24,3 @@ label.files ul {
 label.files li {
 	margin-bottom: .25em;
 }
-
-label.failed.files div ul {
-	display: none;
-}
-label.failed.files div:hover ul {
-	display: block;
-}
