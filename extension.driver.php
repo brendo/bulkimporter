@@ -24,6 +24,7 @@
 		public $target_field = null;
 		public $linked_entry = null;
 		public $files = array();
+		public $entries = array();
 
 	/*-------------------------------------------------------------------------
 		Definition:
@@ -83,6 +84,12 @@
 			if ($page instanceof contentExtensionBulkImporterImport) {
 				$page->addStylesheetToHead(URL . '/extensions/bulkimporter/assets/default.css','screen', 100);
 				$page->addScriptToHead(URL . '/extensions/bulkimporter/assets/default.js', 101);
+			}
+			else {
+				$callback = Symphony::Engine()->getPageCallback();
+				if ($callback['driver'] != 'publish' || !is_array($callback['context'])) return;
+				$page->addStylesheetToHead(URL . '/extensions/bulkimporter/assets/bulkimporter.publish.css','screen', 200);
+				$page->addScriptToHead(URL . '/extensions/bulkimporter/assets/bulkimporter.publish.js', 201);
 			}
 	    }
 
@@ -286,7 +293,8 @@
 			foreach($this->files as $file) {
 				$path = '/';
 				if ($this->preserve_subdirectories) {
-					$path = dirname(substr($file->location, strlen($this->extracted_directory))) . '/';
+					$path = dirname(substr($file->location, strlen($this->extracted_directory)));
+					if ($path != '/') $path .= '/';
 				}
 				else if ($this->archive_is_parent) {
 					$path = '/' . $this->extracted_archive . '/';
@@ -300,9 +308,6 @@
 				$entry->set('section_id', $section->get('id'));
 				$entry->set('author_id', Administration::instance()->Author->get('id'));
 
-				// TODO: was this needed for anything?
-				//$_data[] = $section->get('id');
-
 				// Set the Name
 				if(!is_null($fields['name'])) {
 					$_post[$fields['name']->get('element_name')] = $file->name;
@@ -314,6 +319,14 @@
 				}
 
 				$_post[$this->target_field->get('element_name')] = $final_destination;
+
+				// Cache some info, before we move file
+				// https://github.com/brendo/bulkimporter/pull/7#issuecomment-1105691
+				$meta = array(
+					'size' => $file->size,
+					'mimetype' => $file->mimetype,
+					'meta' => serialize($this->target_field->getMetaInfo($file->location, $file->mimetype))
+				);
 
 				// Move the image from it's bulk-imported location
 				$path = WORKSPACE . dirname($final_destination);
@@ -338,9 +351,9 @@
 					//	Because we can't upload the file using the inbuilt function
 					//	we have to fake the expected output
 					$upload = $entry->getData($this->target_field->get('id'));
-					if (empty($upload['size'])) $upload['size'] = $file->size;
-					if (empty($upload['mimetype'])) $upload['mimetype'] = $file->mimetype;
-					if (empty($upload['meta'])) $upload['meta'] = serialize($this->target_field->getMetaInfo(WORKSPACE . $upload['file'], $file->mimetype));
+					foreach ($meta as $key => $value) {
+						if (empty($upload[$key])) $upload[$key] = $value;
+					}
 					$entry->setData($this->target_field->get('id'), $upload);
 
 					/**
@@ -353,11 +366,11 @@
 					 * @param Entry $entry
 					 * @param array $fields
 					 */
-					Symphony::ExtensionManager()->notifyMembers('EntryPreCreate', '/publish/new/', array('section' => $section, 'entry' => &$entry, 'fields' => &$_data));
+					Symphony::ExtensionManager()->notifyMembers('EntryPreCreate', '/publish/new/', array('section' => $section, 'entry' => &$entry, 'fields' => &$_post));
 
 					if($entry->commit()) {
 						$file->hasUploaded();
-						$entries[] = $entry->get('id');
+						$entries[$final_destination] = $entry->get('id');
 
 						/**
 						 * Creation of an Entry. New Entry object is provided.
@@ -369,7 +382,7 @@
 						 * @param Entry $entry
 						 * @param array $fields
 						 */
-						Symphony::ExtensionManager()->notifyMembers('EntryPostCreate', '/publish/new/', array('section' => $section, 'entry' => $entry, 'fields' => $_data));
+						Symphony::ExtensionManager()->notifyMembers('EntryPostCreate', '/publish/new/', array('section' => $section, 'entry' => $entry, 'fields' => $_post));
 					}
 				}
 				else {
@@ -394,6 +407,8 @@
 				$entry->setData($this->linked_entry['linked-field'], $result);
 				$entry->commit();
 			}
+
+			$this->entries = $entries;
 		}
 	}
 
