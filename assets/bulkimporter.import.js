@@ -2,7 +2,7 @@
 	$(document).ready(function() {
 		// Language strings
 		Symphony.Language.add({
-			'No valid upload field found': false		
+			'No valid upload field found': false
 		});
 
 		$("select.hidden-default").parent().hide();

@@ -82,8 +82,8 @@
 			$page = $context['parent']->Page;
 
 			if ($page instanceof contentExtensionBulkImporterImport) {
-				$page->addStylesheetToHead(URL . '/extensions/bulkimporter/assets/default.css','screen', 100);
-				$page->addScriptToHead(URL . '/extensions/bulkimporter/assets/default.js', 101);
+				$page->addStylesheetToHead(URL . '/extensions/bulkimporter/assets/bulkimporter.import.css','screen', 100);
+				$page->addScriptToHead(URL . '/extensions/bulkimporter/assets/bulkimporter.import.js', 101);
 			}
 			else {
 				$callback = Symphony::Engine()->getPageCallback();
@@ -111,8 +111,8 @@
 			if (PHP_VERSION_ID >= 50300) {
 				try {
 					$files = new RecursiveIteratorIterator(
-					    new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
-					    RecursiveIteratorIterator::CHILD_FIRST
+						new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
+						RecursiveIteratorIterator::CHILD_FIRST
 					);
 
 					foreach($files as $file) {
@@ -158,15 +158,15 @@
 			if (PHP_VERSION_ID >= 50300) {
 				try {
 					$files = new RecursiveIteratorIterator(
-					    new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
-					    RecursiveIteratorIterator::CHILD_FIRST
+						new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
+						RecursiveIteratorIterator::CHILD_FIRST
 					);
 
 					foreach ($files as $fileinfo) {
 						if($fileinfo->getFilename() == "log.txt") continue;
 
-					    $remove = ($fileinfo->isDir() ? 'rmdir' : 'unlink');
-					    $remove($fileinfo->getRealPath());
+						$remove = ($fileinfo->isDir() ? 'rmdir' : 'unlink');
+						$remove($fileinfo->getRealPath());
 					}
 
 					// Remove current directory
@@ -411,4 +411,3 @@
 			$this->entries = $entries;
 		}
 	}
-

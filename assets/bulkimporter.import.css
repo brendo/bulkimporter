@@ -1,0 +1,33 @@
+.group > label {
+	margin-bottom: 1.75em
+}
+
+.group > label:last-child,
+.group > a.no-section {
+	float: right;
+}
+
+fieldset.settings fieldset {
+	border-top: none;
+	margin-top: 0;
+}
+
+fieldset.settings fieldset.primary label:first-child {
+	margin: 0;
+}
+
+label.files ul {
+	list-style: inside square;
+	margin-left: 0;
+}
+
+label.files li {
+	margin-bottom: .25em;
+}
+
+label.failed.files div ul {
+	display: none;
+}
+label.failed.files div:hover ul {
+	display: block;
+}
