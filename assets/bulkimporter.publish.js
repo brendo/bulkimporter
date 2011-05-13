@@ -18,7 +18,7 @@
 
 
 		// Add submenu only for SubsectionManager fields that have "create" button.
-		$('div.field.field-subsectionmanager div.stage div.queue a.create').each(function(){
+		$('div.field.field-subsectionmanager div.stage:not(.single) div.queue a.create').each(function(){
 			var a = $(this),
 				parent = a.parent(),
 				submenu = $('div.submenu', parent),
@@ -105,6 +105,7 @@
 					return $(this).attr('data-value');
 				}).get().join(',');
 
+				var added = 0;
 				$('label.bulkimporter.added.files a', form).sort(function(a,b){return a.innerHTML > b.innerHTML ? 1 : -1;}).each(function(){
 					var id = $(this).attr('href').match(/\d+/g);
 
@@ -122,6 +123,7 @@
 					stage.trigger('edit', [uploadeditem, iframe]);
 
 					sortorder += (sortorder == '' ? '' : ',') + id;
+					added++;
 				});
 
 				form.unbind('submit.bulkimporter');
@@ -129,10 +131,15 @@
 
 				// Save sortorder				
 				stage.parents('div.field-subsectionmanager').find('input[name*="sort_order"]').val(sortorder);
+
+				// Remove empty queue message
+				if (added > 0) {
+					selection.find('li.empty.message').remove();
+				}
 			}
 		};
 
-		$('div.field.field-subsectionmanager div.stage div.queue').delegate(' div.menu div.submenu a.import.bulkimporter', 'click.stage', function(){
+		$('div.field.field-subsectionmanager div.stage:not(.single) div.queue').delegate('div.menu div.submenu a.import.bulkimporter', 'click.stage', function(){
 			event.preventDefault();
 
 			var stage = $(this).parents('div.stage'),
