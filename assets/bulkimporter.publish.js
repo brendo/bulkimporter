@@ -65,8 +65,12 @@
 			content.find('head').prepend('<link rel="stylesheet" type="text/css" media="screen" href="'+root+'/extensions/subsectionmanager/assets/subsection.publish.css">');
 			content.find('body').addClass('inline subsection');
 			content.find('h1, h2, #nav, #notice:not(.error):not(.success), #notice a, #footer').remove();
-			form.find('label').insertBefore(form.find('div.actions'));
-			form.find('fieldset').remove();
+			// Move standard settings out of fieldset
+			form.find('fieldset.settings fieldset').insertBefore(form.find('div.actions'));
+			// Move success and error information fields out of fieldset
+			form.find('fieldset.settings label').prependTo(form);
+			// Remove fieldsets
+			form.find('fieldset.settings').remove();
 			content.find('label input:first').focus();
 
 			// Set height
