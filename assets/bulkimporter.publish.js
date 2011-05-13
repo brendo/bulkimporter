@@ -157,8 +157,8 @@
 				$('<a class="destructor">&#215;</a>').appendTo(item);
 			}
 
-			item.bind('click.bulkimporter', function(){
-				$(this).trigger('destruct');
+			selection.find('li').bind('click.bulkimporter', function(){
+				$('li.bulkimporter').trigger('destruct');
 			});
 
 			stage.trigger('constructstart', [item]);
