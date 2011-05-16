@@ -32,7 +32,7 @@
 		public function about() {
 			return array(
 				'name'			=> __('Bulk Importer'),
-				'version'		=> '0.9.3pre',
+				'version'		=> '0.9.3pre2',
 				'release-date'	=> 'unreleased',
 				'author'		=> array(
 					array(
@@ -55,8 +55,23 @@
 		}
 
 		public function install() {
+			if (!Symphony::Database()->query('
+				CREATE TABLE IF NOT EXISTS tbl_bulkimporter_fields (
+					`field_id` int unsigned,
+					`section_id` int unsigned,
+					PRIMARY KEY (`field_id`),
+					INDEX section_id (`section_id`)
+				)
+			')) return false;
+
 			if (file_exists(WORKSPACE.$this->target)) return true;
 			return General::realiseDirectory(WORKSPACE.$this->target);
+		}
+
+		public function update($previousVersion=false) {
+			if (!$this->install()) return false;
+
+			return true;
 		}
 
 		public function getSubscribedDelegates() {
@@ -70,7 +85,17 @@
 		       	 	'page'    => '/backend/',
 			        'delegate'  => 'InitaliseAdminPageHead',
 			        'callback'  => 'initaliseAdminPageHead'
-		      )
+				),
+				array(
+					'page' => '/blueprints/sections/',
+					'delegate' => 'FieldPostCreate',
+					'callback' => 'fieldPostEdit',
+				),
+				array(
+					'page' => '/blueprints/sections/',
+					'delegate' => 'FieldPostEdit',
+					'callback' => 'fieldPostEdit',
+				)
 			);
 		}
 
@@ -93,11 +118,68 @@
 			}
 			else {
 				$callback = Symphony::Engine()->getPageCallback();
-				if ($callback['driver'] != 'publish' || !is_array($callback['context'])) return;
-				$page->addStylesheetToHead(URL . '/extensions/bulkimporter/assets/bulkimporter.publish.css','screen', 200);
-				$page->addScriptToHead(URL . '/extensions/bulkimporter/assets/bulkimporter.publish.js', 201);
+				if (!is_array($callback['context'])) return;
+
+				if ($callback['driver'] == 'publish' && !empty($callback['context']['section_handle']) && !empty($callback['context']['entry_id'])) {
+					$sm = new SectionManager(Symphony::Engine());
+					$section_id = $sm->fetchIDFromHandle($callback['context']['section_handle']);
+					$values = Symphony::Database()->fetch('
+						SELECT *
+						FROM tbl_bulkimporter_fields	
+						WHERE `section_id` = '.intval($section_id),
+						'field_id'
+					);
+					if (!empty($values)) {
+						Administration::instance()->Page->addElementToHead(
+							new XMLElement(
+								'script',
+								"Symphony.Context.add('bulkimporter', " . json_encode(array('fields' => $values)) . ");",
+								array('type' => 'text/javascript')
+							), 100
+						);
+						$page->addStylesheetToHead(URL . '/extensions/bulkimporter/assets/bulkimporter.publish.css','screen', 200);
+						$page->addScriptToHead(URL . '/extensions/bulkimporter/assets/bulkimporter.publish.js', 201);
+					}
+				}
+				else if ($callback['driver'] == 'blueprintssections') {
+					if ($callback['context'][0] == 'edit' && is_numeric($callback['context'][1])) {
+						$values = Symphony::Database()->fetch('
+							SELECT *
+							FROM tbl_bulkimporter_fields	
+							WHERE `section_id` = '.intval($callback['context'][1]),
+							'field_id'
+						);
+						if (!empty($values)) {
+							Administration::instance()->Page->addElementToHead(
+								new XMLElement(
+									'script',
+									"Symphony.Context.add('bulkimporter', " . json_encode(array('fields' => $values)) . ");",
+									array('type' => 'text/javascript')
+								), 100
+							);
+						}
+					}
+
+					//$page->addStylesheetToHead(URL . '/extensions/bulkimporter/assets/bulkimporter.settings.css','screen', 200);
+					$page->addScriptToHead(URL . '/extensions/bulkimporter/assets/bulkimporter.settings.js', 201);
+				}
 			}
 	    }
+
+		public function fieldPostEdit($ctx) {
+			// context array contains: &$field, &$data
+			if (!isset($ctx['data']) || !in_array($ctx['data']['type'], array('subsectionmanager'/* TODO: add other supported field types here */))) return;
+
+			$fields = array(
+				'field_id' => intval($ctx['field']->get('id')),
+				'section_id' => intval($ctx['field']->get('parent_section')),
+			);
+
+			Symphony::Database()->query("DELETE FROM tbl_bulkimporter_fields WHERE section_id = {$fields['section_id']} AND field_id = {$fields['field_id']}");
+			if (is_array($ctx['data']['bulkimporter']) && $ctx['data']['bulkimporter']['enabled'] == 'Yes') {
+				Symphony::Database()->insert($fields, 'tbl_bulkimporter_fields');
+			}
+		}
 
 	/*-------------------------------------------------------------------------
 		Utility functions:

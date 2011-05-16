@@ -14,11 +14,14 @@
 			'Single entry': false
 		});
 
-		var root = Symphony.Context.get('root');
+		var root = Symphony.Context.get('root'),
+			params = Symphony.Context.get('bulkimporter');
 
+		if (!params || !params['fields']) return;
 
 		// Add submenu only for SubsectionManager fields that have "create" button.
 		$('div.field.field-subsectionmanager div.stage:not(.single) div.queue a.create').each(function(){
+
 			var a = $(this),
 				parent = a.parent(),
 				submenu = $('div.submenu', parent),
@@ -26,32 +29,24 @@
 				field_id = field.attr('id').replace(/^field-/, ''),
 				section_id = $('input[name="fields\\[subsection_id\\]\\['+field_id+'\\]"]', field).val();
 
-			$.get(
-				root + '/symphony/extension/bulkimporter/ajaxsectioninfo/',
-				{section: section_id},
-				function(data) {
-					// Fields
-					if ($(data).find('field').length > 0) {
-						if (!parent.is('div.menu')) {
-							a.wrap('<div class="menu"/>');
-							parent = a.parent();
-						}
+			if (!field_id || !params['fields'][field_id]) return;
 
-						if (submenu.length < 1) {
-							submenu = $('<div class="submenu"/>').insertAfter(a);
-						}
+			if (!parent.is('div.menu')) {
+				a.wrap('<div class="menu"/>');
+				parent = a.parent();
+			}
 
-						if ($('a.option.single', parent).length < 1) {
-							a.clone().addClass('option single').html(Symphony.Language.get('Single entry')).appendTo(submenu);
-						}
+			if (submenu.length < 1) {
+				submenu = $('<div class="submenu"/>').insertAfter(a);
+			}
 
-						if ($('a.option.bulkimporter', parent).length < 1) {
-							$('<a class="import option bulkimporter">'+Symphony.Language.get('Bulk Import')+'</a>').appendTo(submenu);
-						}
-					}
-				},
-				'xml'
-			);
+			if ($('a.option.single', parent).length < 1) {
+				a.clone().addClass('option single').html(Symphony.Language.get('Single entry')).appendTo(submenu);
+			}
+
+			if ($('a.option.bulkimporter', parent).length < 1) {
+				$('<a class="import option bulkimporter">'+Symphony.Language.get('Bulk Import')+'</a>').appendTo(submenu);
+			}
 		});
 
 		// Load() mostly from subsectionmanager.publish.js
