@@ -14,11 +14,14 @@
 			'Single entry': false
 		});
 
-		var root = Symphony.Context.get('root');
+		var root = Symphony.Context.get('root'),
+			params = Symphony.Context.get('bulkimporter');
 
+		if (!params || !params['fields']) return;
 
 		// Add submenu only for SubsectionManager fields that have "create" button.
-		$('div.field.field-subsectionmanager div.stage div.queue a.create').each(function(){
+		$('div.field.field-subsectionmanager div.stage:not(.single) div.queue a.create').each(function(){
+
 			var a = $(this),
 				parent = a.parent(),
 				submenu = $('div.submenu', parent),
@@ -26,32 +29,24 @@
 				field_id = field.attr('id').replace(/^field-/, ''),
 				section_id = $('input[name="fields\\[subsection_id\\]\\['+field_id+'\\]"]', field).val();
 
-			$.get(
-				root + '/symphony/extension/bulkimporter/ajaxsectioninfo/',
-				{section: section_id},
-				function(data) {
-					// Fields
-					if ($(data).find('field').length > 0) {
-						if (!parent.is('div.menu')) {
-							a.wrap('<div class="menu"/>');
-							parent = a.parent();
-						}
+			if (!field_id || !params['fields'][field_id]) return;
 
-						if (submenu.length < 1) {
-							submenu = $('<div class="submenu"/>').insertAfter(a);
-						}
+			if (!parent.is('div.menu')) {
+				a.wrap('<div class="menu"/>');
+				parent = a.parent();
+			}
 
-						if ($('a.option.single', parent).length < 1) {
-							a.clone().addClass('option single').html(Symphony.Language.get('Single entry')).appendTo(submenu);
-						}
+			if (submenu.length < 1) {
+				submenu = $('<div class="submenu"/>').insertAfter(a);
+			}
 
-						if ($('a.option.bulkimporter', parent).length < 1) {
-							$('<a class="import option bulkimporter">'+Symphony.Language.get('Bulk Import')+'</a>').appendTo(submenu);
-						}
-					}
-				},
-				'xml'
-			);
+			if ($('a.option.single', parent).length < 1) {
+				a.clone().addClass('option single').html(Symphony.Language.get('Single entry')).appendTo(submenu);
+			}
+
+			if ($('a.option.bulkimporter', parent).length < 1) {
+				$('<a class="import option bulkimporter">'+Symphony.Language.get('Bulk Import')+'</a>').appendTo(submenu);
+			}
 		});
 
 		// Load() mostly from subsectionmanager.publish.js
@@ -65,8 +60,12 @@
 			content.find('head').prepend('<link rel="stylesheet" type="text/css" media="screen" href="'+root+'/extensions/subsectionmanager/assets/subsection.publish.css">');
 			content.find('body').addClass('inline subsection');
 			content.find('h1, h2, #nav, #notice:not(.error):not(.success), #notice a, #footer').remove();
-			form.find('label').insertBefore(form.find('div.actions'));
-			form.find('fieldset').remove();
+			// Move standard settings out of fieldset
+			form.find('fieldset.settings fieldset').insertBefore(form.find('div.actions'));
+			// Move success and error information fields out of fieldset
+			form.find('fieldset.settings label').prependTo(form);
+			// Remove fieldsets
+			form.find('fieldset.settings').remove();
 			content.find('label input:first').focus();
 
 			// Set height
@@ -105,6 +104,7 @@
 					return $(this).attr('data-value');
 				}).get().join(',');
 
+				var added = 0;
 				$('label.bulkimporter.added.files a', form).sort(function(a,b){return a.innerHTML > b.innerHTML ? 1 : -1;}).each(function(){
 					var id = $(this).attr('href').match(/\d+/g);
 
@@ -122,6 +122,7 @@
 					stage.trigger('edit', [uploadeditem, iframe]);
 
 					sortorder += (sortorder == '' ? '' : ',') + id;
+					added++;
 				});
 
 				form.unbind('submit.bulkimporter');
@@ -129,10 +130,15 @@
 
 				// Save sortorder				
 				stage.parents('div.field-subsectionmanager').find('input[name*="sort_order"]').val(sortorder);
+
+				// Remove empty queue message
+				if (added > 0) {
+					selection.find('li.empty.message').remove();
+				}
 			}
 		};
 
-		$('div.field.field-subsectionmanager div.stage div.queue').delegate(' div.menu div.submenu a.import.bulkimporter', 'click.stage', function(){
+		$('div.field.field-subsectionmanager div.stage:not(.single) div.queue').delegate('div.menu div.submenu a.import.bulkimporter', 'click.stage', function(){
 			event.preventDefault();
 
 			var stage = $(this).parents('div.stage'),
@@ -146,8 +152,8 @@
 				$('<a class="destructor">&#215;</a>').appendTo(item);
 			}
 
-			item.bind('click.bulkimporter', function(){
-				$(this).trigger('destruct');
+			selection.find('li').bind('click.bulkimporter', function(){
+				$('li.bulkimporter').trigger('destruct');
 			});
 
 			stage.trigger('constructstart', [item]);
