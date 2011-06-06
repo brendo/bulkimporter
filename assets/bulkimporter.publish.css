@@ -26,8 +26,9 @@ div.stage div.queue div.menu div.submenu {
 div.stage div.queue div.menu:hover div.submenu {
 	position: absolute;
 	display: block;
+	width: auto;
 	top: 7px;
-	right: 0;
+	right: 0px;
 	margin-top: 1em;
 	background: transparent;
 	z-index: 99;
@@ -37,26 +38,27 @@ div.stage div.queue div.menu:hover > a.create {
 	border: 1px solid #81b934;
 	color: #fff;
 	background: #81b934;
-	border-bottom-left-radius: 0;
-	-moz-border-bottom-left-radius: 0;
+	-moz-border-radius-bottomright: 0;
+	-moz-border-radius-bottomleft: 0;
 	-webkit-border-bottom-left-radius: 0;
-	border-bottom-right-radius: 0;
-	-moz-border-bottom-right-radius: 0;
 	-webkit-border-bottom-right-radius: 0;
+	border-bottom-left-radius: 0;
+	border-bottom-right-radius: 0;
 }
 
 div.stage div.queue div.menu div.submenu a.option {
 	display: block;
 	float: none;
+	min-width: 7em;
 }
 
 /* Copy rules from stage.publish.css */
 div.stage div.queue div.menu div.submenu a.option, div.stage div.queue div.menu div.submenu a.create.option {
 	margin: 0px;
 	border: 1px solid #81b934;
-	border-radius: 0;
 	-moz-border-radius: 0;
 	-webkit-border-radius: 0;
+	border-radius: 0;
 	padding: 3px 14px 4px;
 	color: #fff;
 	background: #81b934;
@@ -67,13 +69,19 @@ div.stage div.queue div.menu div.submenu a.option, div.stage div.queue div.menu 
 	height: 10px;
 }
 
+div.stage div.queue div.menu div.submenu a.option:first-child {
+	-moz-border-radius-topleft: 1em;
+	-webkit-border-top-left-radius: 1em;
+	border-top-left-radius: 1em;
+}
+
 div.stage div.queue div.menu div.submenu a.option:last-child {
-	border-bottom-left-radius: 1em;
-	-moz-border-bottom-left-radius: 1em;
+	-moz-border-radius-bottomright: 1em;
+	-moz-border-radius-bottomleft: 1em;
 	-webkit-border-bottom-left-radius: 1em;
-	border-bottom-right-radius: 1em;
-	-moz-border-bottom-right-radius: 1em;
 	-webkit-border-bottom-right-radius: 1em;
+	border-bottom-left-radius: 1em;
+	border-bottom-right-radius: 1em;
 }
 
 /* "Highlight" color copied from dashboard.index.css */
