@@ -20,8 +20,7 @@
 		if (!params || !params['fields']) return;
 
 		// Add submenu only for SubsectionManager fields that have "create" button.
-		$('div.field.field-subsectionmanager div.stage:not(.single) div.queue a.create').each(function(){
-
+		$('div.field-subsectionmanager div.stage:not(.single) div.queue a.create').each(function(){
 			var a = $(this),
 				parent = a.parent(),
 				submenu = $('div.submenu', parent),
@@ -91,7 +90,7 @@
 				}, 'fast');
 			});
 
-			// Trigger update 
+			// Trigger update
 			if(content.find('#notice.success').size() > 0) {
 				// Make Subsection Manager add new items
 				// First "disable" form, just in case someone can click fast
@@ -128,7 +127,7 @@
 				form.unbind('submit.bulkimporter');
 				item.trigger('destruct');
 
-				// Save sortorder				
+				// Save sortorder
 				stage.parents('div.field-subsectionmanager').find('input[name*="sort_order"]').val(sortorder);
 
 				// Remove empty queue message
@@ -138,7 +137,7 @@
 			}
 		};
 
-		$('div.field.field-subsectionmanager div.stage:not(.single) div.queue').delegate('div.menu div.submenu a.import.bulkimporter', 'click.stage', function(){
+		$('div.field-subsectionmanager div.stage:not(.single) div.queue').delegate('a.import.bulkimporter', 'click.stage', function(event) {
 			event.preventDefault();
 
 			var stage = $(this).parents('div.stage'),
@@ -188,7 +187,7 @@
 			});
 
 			// Show subsection editor
-			editor.insertAfter(item).slideDown('fast');			
+			editor.insertAfter(item).slideDown('fast');
 			stage.trigger('createstop', [item]);
 
 			stage.trigger('browsestop');

@@ -29,10 +29,11 @@
 	/*-------------------------------------------------------------------------
 		Definition:
 	-------------------------------------------------------------------------*/
+
 		public function about() {
 			return array(
 				'name'			=> __('Bulk Importer'),
-				'version'		=> '0.9.3pre2',
+				'version'		=> '0.9.3pre3',
 				'release-date'	=> 'unreleased',
 				'author'		=> array(
 					array(
@@ -45,13 +46,8 @@
 						'email'			=> 'ahwayakchih@neoni.net'
 					)
 				),
-				'description'	=> __('Imports an archive of files into a chosen section as individual entries
-				with the option to link the newly created entries with another entry')
-	 		);
-		}
-
-		public function uninstall() {
-			return true;
+				'description'	=> __('Imports an archive of files into a chosen section as individual entries with the option to link the newly created entries with another entry')
+			);
 		}
 
 		public function install() {
@@ -74,17 +70,21 @@
 			return true;
 		}
 
+		public function uninstall() {
+			return true;
+		}
+
 		public function getSubscribedDelegates() {
 			return array(
 				array(
-					'page'		=> '/system/preferences/',
-					'delegate'	=> 'AddCustomPreferenceFieldsets',
-					'callback'	=> 'preferences'
+					'page' => '/system/preferences/',
+					'delegate' => 'AddCustomPreferenceFieldsets',
+					'callback' => 'preferences'
 				),
 				array(
-		       	 	'page'    => '/backend/',
-			        'delegate'  => 'InitaliseAdminPageHead',
-			        'callback'  => 'initaliseAdminPageHead'
+					'page' => '/backend/',
+					'delegate' => 'InitaliseAdminPageHead',
+					'callback' => 'initaliseAdminPageHead'
 				),
 				array(
 					'page' => '/blueprints/sections/',
@@ -118,6 +118,7 @@
 			}
 			else {
 				$callback = Symphony::Engine()->getPageCallback();
+
 				if (!is_array($callback['context'])) return;
 
 				if ($callback['driver'] == 'publish' && !empty($callback['context']['section_handle']) && !empty($callback['context']['entry_id'])) {
@@ -125,7 +126,7 @@
 					$section_id = $sm->fetchIDFromHandle($callback['context']['section_handle']);
 					$values = Symphony::Database()->fetch('
 						SELECT *
-						FROM tbl_bulkimporter_fields	
+						FROM tbl_bulkimporter_fields
 						WHERE `section_id` = '.intval($section_id),
 						'field_id'
 					);
@@ -145,7 +146,7 @@
 					if ($callback['context'][0] == 'edit' && is_numeric($callback['context'][1])) {
 						$values = Symphony::Database()->fetch('
 							SELECT *
-							FROM tbl_bulkimporter_fields	
+							FROM tbl_bulkimporter_fields
 							WHERE `section_id` = '.intval($callback['context'][1]),
 							'field_id'
 						);
@@ -164,7 +165,7 @@
 					$page->addScriptToHead(URL . '/extensions/bulkimporter/assets/bulkimporter.settings.js', 201);
 				}
 			}
-	    }
+		}
 
 		public function fieldPostEdit($ctx) {
 			// context array contains: &$field, &$data
@@ -192,8 +193,8 @@
 		 * Given a directory, recursively find all the files and add them to
 		 * the $this->files if they aren't a hidden directory.
 		 *
-	     * @param string $dir
-	 	 * @return boolean
+		 * @param string $dir
+		 * @return boolean
 		 */
 		public function openExtracted($dir) {
 			if (PHP_VERSION_ID >= 50300) {
@@ -217,7 +218,7 @@
 			else {
 				if ($extractManager = opendir($dir)) {
 					while(($file = readdir($extractManager)) !== FALSE) {
-						if(in_array($file,  array('.', '..', '__MACOSX'))) continue;
+						if(in_array($file,	array('.', '..', '__MACOSX'))) continue;
 
 						$file = $dir . '/' . $file;
 						if(is_dir($file)) {
@@ -288,7 +289,7 @@
 		 * $files array.
 		 *
 		 * @return boolean
-		 *  True if the $files array is not empty, false otherwise
+		 *	True if the $files array is not empty, false otherwise
 		 */
 		public function beginProcess() {
 			if(empty($_FILES['fields']['name']['file'])) return false;

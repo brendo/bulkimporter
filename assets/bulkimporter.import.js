@@ -16,8 +16,8 @@
 
 		// Section Box Change
 		$("#target-section").live('change', function() {
-			var self = $(this),
-				sectionID = $('option:selected', self).val();
+			var $self = $(this),
+				sectionID = $('option:selected', $self).val();
 
 			fields.attr('disabled', false).empty();
 			linked.attr('disabled', false).empty();
@@ -48,8 +48,8 @@
 
 					// Related Sections
 					$(data).find('section').each(function() {
-						var self = $(this);
-						section_opts += "<option value='" + self.attr('id') + "'>" + self.attr('section') + ' : ' + self.text() + "</option>";
+						var $self = $(this);
+						section_opts += "<option value='" + $self.attr('id') + "'>" + $self.attr('section') + ' : ' + $self.text() + "</option>";
 					});
 
 					if(section_opts != "") {
@@ -66,7 +66,7 @@
 
 		// Section Link change
 		$("#linked-section").live('change', function() {
-			var self = $(this),
+			var $self = $(this),
 				fieldID = $('option:selected', $("#linked-section")).val(),
 				sectionID = $('option:selected', $('#target-section')).val(),
 				entries = $("#linked-entry");

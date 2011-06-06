@@ -1,11 +1,13 @@
 <?php
 
 	require_once(TOOLKIT . '/class.administrationpage.php');
-	require_once(TOOLKIT . '/class.sectionmanager.php');
+	require_once(TOOLKIT . '/class.entrymanager.php');
 
 	class contentExtensionBulkImporterImport extends AdministrationPage {
+
 		protected $_driver;
 		protected $_errors;
+
 		protected static $sectionManager = null;
 		protected static $fieldManager = null;
 		protected static $entryManager = null;
@@ -13,9 +15,9 @@
 		public function __construct(Administration &$parent){
 			parent::__construct($parent);
 
-			self::$sectionManager = new SectionManager(Administration::instance());
-			self::$fieldManager = new FieldManager(Administration::instance());
-			self::$entryManager = new FieldManager(Administration::instance());
+			self::$entryManager = new EntryManager(Administration::instance());
+			self::$sectionManager = self::$entryManager->sectionManager;
+			self::$fieldManager = self::$entryManager->fieldManager;
 
 			$this->_driver = Symphony::ExtensionManager()->create('bulkimporter');
 		}
@@ -102,9 +104,9 @@
 
 			$div = new XMLElement('div');
 			$div->setAttribute('class', 'actions');
-
-			$attr = array('accesskey' => 's');
-			$div->appendChild(Widget::Input('action[save]', __('Import'), 'submit', $attr));
+			$div->appendChild(
+				Widget::Input('action[save]', __('Import'), 'submit', array('accesskey' => 's'))
+			);
 
 			$this->Form->appendChild($div);
 		}
@@ -180,8 +182,8 @@
 
 		public function __viewIndexSectionFields($wrapper) {
 			$options = array();
-			if (!empty($_GET['prepopulate']['target'])) {
 
+			if (!empty($_GET['prepopulate']['target'])) {
 				// Fetch sections & populate a dropdown with the available upload fields
 				$section = self::$sectionManager->fetch($_GET['prepopulate']['target']);
 				if (!empty($section)) {
@@ -243,6 +245,7 @@
 	/*-------------------------------------------------------------------------
 		File Interface:
 	-------------------------------------------------------------------------*/
+
 		public function __viewIndexFileInterface($context) {
 			$label = Widget::Label(__('File'));
 			$label->appendChild(Widget::Input('fields[file]', NULL, 'file'));
@@ -329,8 +332,8 @@
 			}
 			else {
 				$this->pageAlert(
-					__('Bulk import complete to <code>%s</code>, %d were uploaded, %d failed.', array(
-						$section->get('handle'), $uploaded, $failed
+					__('Bulk import complete to <code>%s</code>, %d were uploaded, %d failed. <a href="%s">Import another?</a> <a href="%s">View section</a>', array(
+						$section->get('handle'), $uploaded, $failed, URL . '/symphony/extension/bulkimporter/import/', URL . '/symphony/publish/' . $section->get('handle') . '/'
 					)),
 					Alert::SUCCESS
 				);
