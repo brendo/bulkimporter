@@ -7,7 +7,7 @@
  * @source: http://github.com/brendo/bulkimporter
  */
 
-div.field-subsectionmanager div.stage li {
+div.field-subsectionmanager div.stage li:not(.empty, .bulkimporter) {
 	min-height: 53px;
 }
 
