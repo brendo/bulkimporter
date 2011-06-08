@@ -6,7 +6,7 @@
 	class contentExtensionBulkImporterAjaxEntries extends AjaxPage {
 
 		public function view() {
-			$entryManager = new EntryManager($this->_Parent);
+			$entryManager = new EntryManager(Administration::instance());
 
 			$field = $entryManager->fieldManager->fetch($_GET['field']);
 			$section = $entryManager->sectionManager->fetch($field->get('parent_section'));

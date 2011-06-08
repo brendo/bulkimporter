@@ -24,7 +24,7 @@
 		 * If the file's entry has been committed to Symphony successfully,
 		 * this function will be called
 		 */
-		public function hasUploaded() {
+		public function setUploaded() {
 			$this->imported = true;
 		}
 

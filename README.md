@@ -2,8 +2,8 @@
 
 The Bulk Importer allows you to upload a zip archive of files to Symphony. The extracted files are injected into a chosen section into an upload field. The name of the file is added to the first instance of a "text input" style field. Optionally, you can link the newly imported entries to another entry using either the Select Box Link, Reference Link, Bi Link or Subsection Manager extensions.
 
-- Version: 0.9.3pre3
-- Date: unreleased
+- Version: 0.9.3
+- Date: June 8th 2011
 - Requirements: Symphony 2.2 or newer, <http://github.com/symphonycms/symphony-2/>
 - Author: Brendan Abbott <brendan@bloodbone.ws>
 - GitHub Repository: <https://github.com/brendo/bulk-importer>

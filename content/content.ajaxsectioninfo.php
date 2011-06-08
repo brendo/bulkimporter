@@ -7,8 +7,8 @@
 	class contentExtensionBulkImporterAjaxSectionInfo extends AjaxPage {
 
 		public function view() {
-			$sectionManager = new SectionManager($this->_Parent);
-			$fieldManager = new FieldManager($this->_Parent);
+			$sectionManager = new SectionManager(Administration::instance());
+			$fieldManager = new FieldManager(Administration::instance());
 
 			// Fetch sections & populate a dropdown with the available upload fields
 			$section = $sectionManager->fetch($_GET['section']);

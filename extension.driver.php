@@ -5,8 +5,6 @@
 
 	class Extension_BulkImporter extends Extension {
 
-		protected $_Parent = null;
-
 		protected static $target = '/uploads/bulkimporter';
 		public $extracted_directory = null;
 		public $extracted_archive = null;
@@ -33,8 +31,8 @@
 		public function about() {
 			return array(
 				'name'			=> __('Bulk Importer'),
-				'version'		=> '0.9.3pre3',
-				'release-date'	=> 'unreleased',
+				'version'		=> '0.9.3',
+				'release-date'	=> '2011-06-08',
 				'author'		=> array(
 					array(
 						'name'			=> 'Brendan Abbott',
@@ -459,7 +457,7 @@
 					Symphony::ExtensionManager()->notifyMembers('EntryPreCreate', '/publish/new/', array('section' => $section, 'entry' => &$entry, 'fields' => &$_post));
 
 					if($entry->commit()) {
-						$file->hasUploaded();
+						$file->setUploaded();
 						$entries[$final_destination] = $entry->get('id');
 
 						/**
