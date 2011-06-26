@@ -484,12 +484,13 @@
 
 				// Linked field, process the array of ID's to add
 				$field = $entryManager->fieldManager->fetch($this->linked_entry['linked-field']);
-				$result = $field->processRawFieldData($entries, $s, false, $entry->get('id'));
+				$result = $field->processRawFieldData(array_values($entries), $s, false, $entry->get('id'));
 
 				// Get the current linked entries and merge with the new ones
 				$existing_values = $entry->getData($this->linked_entry['linked-field']);
+
 				if(is_array($existing_values['relation_id'])) {
-					$result['relation_id'] = array_merge_recursive($result['relation_id'], $existing_values['relation_id']);
+					$result = array_merge_recursive($result, $existing_values);
 				}
 
 				$entry->setData($this->linked_entry['linked-field'], $result);
