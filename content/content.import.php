@@ -247,7 +247,7 @@
 	-------------------------------------------------------------------------*/
 
 		public function __viewIndexFileInterface($context) {
-			$label = Widget::Label(__('File'));
+			$label = Widget::Label(__('File (up to %s MB)', array($this->getMaxFileSize() / 1024 / 1024)));
 			$label->appendChild(Widget::Input('fields[file]', NULL, 'file'));
 			$context->appendChild($label);
 
@@ -439,6 +439,28 @@
 			}
 
 			return $options;
+		}
+
+		private function iniGetInBytes($name) {
+			$result = trim(ini_get($name));
+			switch(strtolower($result[strlen($result)-1])) {
+				case 'g':
+					$result *= 1024;
+				case 'm':
+					$result *= 1024;
+				case 'k':
+					$result *= 1024;
+			}
+
+			return $result;
+		}
+
+		private function getMaxFileSize() {
+			$max_size = Symphony::Configuration()->get('max_upload_size', 'admin');
+			$file_max_size = $this->iniGetInBytes('upload_max_filesize');
+			$post_max_size = $this->iniGetInBytes('post_max_size');
+
+			return min($max_size, $file_max_size, $post_max_size);
 		}
 	}
 

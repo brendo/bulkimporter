@@ -4,6 +4,8 @@
 	require_once(TOOLKIT . '/class.sectionmanager.php');
 	require_once(TOOLKIT . '/class.extensionmanager.php');
 
+	require_once(EXTENSIONS . '/bulkimporter/extension.driver.php');
+
 	class contentExtensionBulkImporterAjaxSectionInfo extends AjaxPage {
 
 		public function view() {

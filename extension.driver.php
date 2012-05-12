@@ -317,7 +317,7 @@
 
 			$path = '';
 			if ($this->archive_is_parent) {
-				$path = '/' . preg_replace('/\.[^\.]+$/', '', basename($uploadedZipPath));
+				$path = '/' . Lang::createHandle(preg_replace('/\.[^\.]+$/', '', basename($uploadedZipPath)));
 				$this->extracted_archive = basename($path);
 				if(!file_exists($this->extracted_directory . $path)) General::realiseDirectory($this->extracted_directory . $path);
 			}
